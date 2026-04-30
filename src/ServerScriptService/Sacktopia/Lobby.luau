@@ -34,6 +34,32 @@ type Queue = {
 local queues: { [string]: Queue } = {}
 local activeMatches: { [string]: any } = {} -- worldId -> MatchController
 
+local function updateQueueBoard(worldId: string)
+	local label = ArenaBuilder.getQueueBoardLabel(worldId)
+	if not label then
+		return
+	end
+	local q = queues[worldId]
+	if not q then
+		return
+	end
+	local minP = effectiveMinPlayers()
+	local cap = Config.Lobby.MaxPlayersPerMatch
+	local count = #q.players
+	if activeMatches[worldId] then
+		label.Text = string.format("MATCH IN PROGRESS\n%d / %d queued for next", count, cap)
+	elseif q.autoStartAt then
+		local seconds = math.max(math.ceil(q.autoStartAt - os.clock()), 0)
+		label.Text = string.format("%d / %d in queue\nMatch starts in %ds", count, cap, seconds)
+	elseif count >= minP then
+		label.Text = string.format("%d / %d in queue\nReady…", count, cap)
+	elseif count > 0 then
+		label.Text = string.format("%d / %d in queue\nNeed %d more to start", count, cap, minP - count)
+	else
+		label.Text = string.format("0 / %d in queue\nNeed %d to start", cap, minP)
+	end
+end
+
 local function broadcastQueueState(worldId: string)
 	local q = queues[worldId]
 	if not q then
@@ -49,6 +75,7 @@ local function broadcastQueueState(worldId: string)
 		secondsToStart = secondsToStart,
 		matchInProgress = activeMatches[worldId] ~= nil,
 	})
+	updateQueueBoard(worldId)
 end
 
 local function teleportToLobby(player: Player)
@@ -59,6 +86,21 @@ local function teleportToLobby(player: Player)
 	local char = player.Character
 	if char then
 		char:PivotTo(ArenaBuilder.getLobbyCFrame())
+	end
+end
+
+local function teleportToWorldStaging(player: Player, worldId: string)
+	local cf = ArenaBuilder.getStagingCFrame(worldId)
+	if not cf then
+		return
+	end
+	if not player.Character then
+		player:LoadCharacter()
+		player.CharacterAdded:Wait()
+	end
+	local char = player.Character
+	if char then
+		char:PivotTo(cf)
 	end
 end
 
@@ -109,15 +151,16 @@ local function tryStartMatch(worldId: string)
 	local match = MatchController.new(q.world, roster)
 	activeMatches[worldId] = match
 	match:onEnded(function(placements)
-		-- teleport survivors + losers back
+		-- send everyone back to the world's staging area so re-queueing is one step
 		task.delay(2.5, function()
 			for _, p in placements do
 				if p and p.Parent then
-					teleportToLobby(p)
+					teleportToWorldStaging(p, worldId)
 				end
 			end
 			activeMatches[worldId] = nil
-			-- maybe a new match is ready
+			updateQueueBoard(worldId)
+			-- if more players have queued in the meantime, fire next match
 			tryStartMatch(worldId)
 		end)
 	end)
@@ -160,6 +203,9 @@ local function joinQueue(player: Player, worldId: string)
 			return -- already queued
 		end
 	end
+	if #q.players >= Config.Lobby.MaxPlayersPerMatch then
+		return -- queue full; player should wait for next cycle
+	end
 	table.insert(q.players, player)
 	if #q.players >= effectiveMinPlayers() and not q.autoStartAt and not activeMatches[worldId] then
 		q.autoStartAt = os.clock() + Config.Lobby.QueueAutoStartSeconds
@@ -176,17 +222,69 @@ local function leaveQueue(player: Player)
 	removeFromAllQueues(player)
 end
 
+-- shared touch → player resolver with debounce so we don't fire 30x per second
+local touchDebounce: { [Player]: number } = {}
+local function resolveTouchedPlayer(hit: BasePart, debounceSeconds: number): Player?
+	local char = hit:FindFirstAncestorWhichIsA("Model")
+	if not char then
+		return nil
+	end
+	local player = Players:GetPlayerFromCharacter(char)
+	if not player then
+		return nil
+	end
+	local now = os.clock()
+	local last = touchDebounce[player]
+	if last and now - last < debounceSeconds then
+		return nil
+	end
+	touchDebounce[player] = now
+	return player
+end
+
 local function bindPortalTouch(portal: ArenaBuilder.Portal)
+	-- Portals NO LONGER auto-queue. They just teleport you to that world's staging area.
+	-- Queueing is opt-in via the green QUEUE pad inside the world.
 	portal.part.Touched:Connect(function(hit: BasePart)
-		local char = hit:FindFirstAncestorWhichIsA("Model")
-		if not char then
-			return
-		end
-		local player = Players:GetPlayerFromCharacter(char)
+		local player = resolveTouchedPlayer(hit, 1.0)
 		if not player then
 			return
 		end
-		joinQueue(player, portal.world.id)
+		local stats = PlayerStats.get(player)
+		if not stats then
+			return
+		end
+		if not Worlds.canEnter(portal.world, stats.tierId) then
+			return -- gated; LobbyHUD shows the lock
+		end
+		if isInAnyMatch(player) then
+			return
+		end
+		teleportToWorldStaging(player, portal.world.id)
+	end)
+end
+
+local function bindQueuePadTouch(worldId: string, pad: BasePart)
+	pad.Touched:Connect(function(hit: BasePart)
+		local player = resolveTouchedPlayer(hit, 0.4)
+		if not player then
+			return
+		end
+		joinQueue(player, worldId)
+	end)
+end
+
+local function bindReturnPadTouch(worldId: string, pad: BasePart)
+	pad.Touched:Connect(function(hit: BasePart)
+		local player = resolveTouchedPlayer(hit, 0.4)
+		if not player then
+			return
+		end
+		if isInAnyMatch(player) then
+			return -- can't bail mid-match via the pad; fall off or die
+		end
+		removeFromAllQueues(player)
+		teleportToLobby(player)
 	end)
 end
 
@@ -199,6 +297,18 @@ function Lobby.start()
 	end
 	for _, portal in portals do
 		bindPortalTouch(portal)
+	end
+	-- bind queue + return pads inside each world
+	for _, world in Worlds.List do
+		local qPad = ArenaBuilder.getQueuePad(world.id)
+		if qPad then
+			bindQueuePadTouch(world.id, qPad)
+		end
+		local rPad = ArenaBuilder.getReturnPad(world.id)
+		if rPad then
+			bindReturnPadTouch(world.id, rPad)
+		end
+		updateQueueBoard(world.id) -- initial paint
 	end
 
 	-- player lifecycle
@@ -227,6 +337,7 @@ function Lobby.start()
 			match:handlePlayerLeaving(p)
 		end
 		PlayerState.remove(p)
+		touchDebounce[p] = nil
 	end)
 
 	-- deflect remote → forward to whichever match the player is in

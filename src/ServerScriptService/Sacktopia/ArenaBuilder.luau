@@ -149,6 +149,12 @@ end
 local builtPortals: { { world: Worlds.World, part: BasePart } } = {}
 local lobbySpawn: SpawnLocation? = nil
 
+-- per-world queue infrastructure
+local queuePads: { [string]: BasePart } = {}
+local returnPads: { [string]: BasePart } = {}
+local queueBoardLabels: { [string]: TextLabel } = {}
+local stagingCFrames: { [string]: CFrame } = {}
+
 export type Portal = { world: Worlds.World, part: BasePart }
 
 local LOBBY_DARK = Color3.fromRGB(20, 14, 38)
@@ -687,6 +693,122 @@ local themeBuilders: { [string]: (Folder, Worlds.World) -> () } = {
 	Olympus = buildOlympus,
 }
 
+local function buildArenaQueueZone(folder: Folder, world: Worlds.World)
+	local platformTopY = world.center.Y + Config.ArenaDefaults.PlatformThickness / 2
+	-- queue pad: green glowing disc, near +Z edge of platform
+	local queuePos = Vector3.new(world.center.X, platformTopY + 0.3, world.center.Z + world.platformRadius * 0.55)
+	local queuePad = part({
+		Name = "QueuePad",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.6, 12, 12),
+		CFrame = CFrame.new(queuePos) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(80, 220, 120),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Transparency = 0.15,
+	})
+	queuePad.Parent = folder
+	local qLight = Instance.new("PointLight")
+	qLight.Color = Color3.fromRGB(80, 220, 120)
+	qLight.Brightness = 2
+	qLight.Range = 16
+	qLight.Parent = queuePad
+
+	-- queue board: floating BillboardGui with multi-line state
+	local board = Instance.new("Part")
+	board.Name = "QueueBoardAnchor"
+	board.Size = Vector3.new(0.5, 0.5, 0.5)
+	board.Position = queuePos + Vector3.new(0, 14, 0)
+	board.Anchored = true
+	board.CanCollide = false
+	board.Transparency = 1
+	board.Parent = folder
+	local bg = Instance.new("BillboardGui")
+	bg.Name = "QueueBoard"
+	bg.Size = UDim2.fromScale(22, 11)
+	bg.AlwaysOnTop = false
+	bg.LightInfluence = 0
+	bg.MaxDistance = 1500
+	bg.Parent = board
+	-- card background
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.fromScale(1, 1)
+	frame.BackgroundColor3 = Color3.fromRGB(10, 10, 16)
+	frame.BackgroundTransparency = 0.25
+	frame.BorderSizePixel = 0
+	local frameCorner = Instance.new("UICorner")
+	frameCorner.CornerRadius = UDim.new(0, 14)
+	frameCorner.Parent = frame
+	local frameStroke = Instance.new("UIStroke")
+	frameStroke.Thickness = 2
+	frameStroke.Color = world.platformColor
+	frameStroke.Parent = frame
+	frame.Parent = bg
+	-- title
+	local title = Instance.new("TextLabel")
+	title.Position = UDim2.fromScale(0, 0.05)
+	title.Size = UDim2.fromScale(1, 0.30)
+	title.BackgroundTransparency = 1
+	title.Font = Enum.Font.GothamBlack
+	title.TextScaled = true
+	title.TextColor3 = world.platformColor
+	title.TextStrokeTransparency = 0.4
+	title.Text = world.name:upper()
+	title.Parent = frame
+	-- status (count + countdown)
+	local status = Instance.new("TextLabel")
+	status.Name = "Status"
+	status.Position = UDim2.fromScale(0, 0.36)
+	status.Size = UDim2.fromScale(1, 0.40)
+	status.BackgroundTransparency = 1
+	status.Font = Enum.Font.GothamBold
+	status.TextScaled = true
+	status.TextColor3 = Color3.fromRGB(255, 255, 255)
+	status.TextStrokeTransparency = 0.4
+	status.Text = "0 / 14 in queue\nNeed 2 to start"
+	status.Parent = frame
+	-- footer hint
+	local hint = Instance.new("TextLabel")
+	hint.Position = UDim2.fromScale(0, 0.78)
+	hint.Size = UDim2.fromScale(1, 0.18)
+	hint.BackgroundTransparency = 1
+	hint.Font = Enum.Font.Gotham
+	hint.TextScaled = true
+	hint.TextColor3 = Color3.fromRGB(160, 200, 160)
+	hint.TextStrokeTransparency = 0.4
+	hint.Text = "Step on the GREEN pad to queue"
+	hint.Parent = frame
+
+	queueBoardLabels[world.id] = status
+
+	-- return pad: red glowing disc, opposite side
+	local returnPos = Vector3.new(world.center.X, platformTopY + 0.3, world.center.Z - world.platformRadius * 0.55)
+	local returnPad = part({
+		Name = "ReturnPad",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.6, 8, 8),
+		CFrame = CFrame.new(returnPos) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(230, 70, 70),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Transparency = 0.2,
+	})
+	returnPad.Parent = folder
+	local rLight = Instance.new("PointLight")
+	rLight.Color = Color3.fromRGB(230, 70, 70)
+	rLight.Brightness = 1.5
+	rLight.Range = 12
+	rLight.Parent = returnPad
+	billboard(returnPad, "← BACK TO LOBBY", Color3.fromRGB(255, 200, 200), Vector2.new(10, 2.2), 4)
+
+	queuePads[world.id] = queuePad
+	returnPads[world.id] = returnPad
+	-- staging position: a few studs in front of the queue pad (toward arena center) so arrivals
+	-- aren't standing on top of the pad and don't auto-fire its Touched event
+	local stagingPos = queuePos + Vector3.new(0, 4, -8)
+	stagingCFrames[world.id] = CFrame.lookAt(stagingPos, queuePos + Vector3.new(0, 4, 0))
+end
+
 local function buildArenas(root: Folder)
 	local arenasFolder = Instance.new("Folder")
 	arenasFolder.Name = "Arenas"
@@ -724,6 +846,8 @@ local function buildArenas(root: Folder)
 		if builder then
 			builder(arenaFolder, world)
 		end
+		-- queue zone (queue pad, return pad, board, staging cframe)
+		buildArenaQueueZone(arenaFolder, world)
 	end
 end
 
@@ -771,6 +895,22 @@ end
 
 function ArenaBuilder.getLobbyCFrame(): CFrame
 	return CFrame.new(Config.Lobby.Center + Vector3.new(0, Config.Lobby.PlatformThickness / 2 + 4, 0))
+end
+
+function ArenaBuilder.getQueuePad(worldId: string): BasePart?
+	return queuePads[worldId]
+end
+
+function ArenaBuilder.getReturnPad(worldId: string): BasePart?
+	return returnPads[worldId]
+end
+
+function ArenaBuilder.getQueueBoardLabel(worldId: string): TextLabel?
+	return queueBoardLabels[worldId]
+end
+
+function ArenaBuilder.getStagingCFrame(worldId: string): CFrame?
+	return stagingCFrames[worldId]
 end
 
 return ArenaBuilder

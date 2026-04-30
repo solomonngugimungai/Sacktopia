@@ -81,7 +81,7 @@ Config.Lobby = {
 	PortalSize = Vector3.new(8, 0.5, 8),
 	-- queue → match
 	QueueAutoStartSeconds = 6, -- once min players are queued, auto-start after this delay
-	MaxPlayersPerMatch = 8,
+	MaxPlayersPerMatch = 14, -- hard cap on players who actually drop into a single match
 }
 
 -- Default per-arena bounds (override per world in Worlds.luau)
