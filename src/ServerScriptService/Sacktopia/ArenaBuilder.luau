@@ -575,6 +575,93 @@ local function buildBackyard(folder: Folder, world: Worlds.World)
 		Material = Enum.Material.Slate,
 	})
 	roof.Parent = folder
+
+	-- ARENA FEATURES --
+
+	-- two raised wooden decks at +X and -X (jumping platforms)
+	for _, sign in { -1, 1 } do
+		local deckPos = world.center + Vector3.new(sign * 28, 2.5, 0)
+		local deck = part({
+			Name = "Deck",
+			Size = Vector3.new(18, 1.2, 14),
+			CFrame = CFrame.new(deckPos),
+			Color = Color3.fromRGB(150, 110, 70),
+			Material = Enum.Material.Wood,
+		})
+		deck.Parent = folder
+		-- short stair stub (just a single block ramp)
+		local ramp = part({
+			Name = "DeckStep",
+			Size = Vector3.new(4, 1.4, 4),
+			CFrame = CFrame.new(deckPos + Vector3.new(-sign * 11, -0.8, 0)),
+			Color = Color3.fromRGB(120, 90, 60),
+			Material = Enum.Material.Wood,
+		})
+		ramp.Parent = folder
+		-- railing on the far edge so deck reads as a deck
+		local rail = part({
+			Name = "DeckRail",
+			Size = Vector3.new(0.4, 2.5, 14),
+			CFrame = CFrame.new(deckPos + Vector3.new(sign * 9, 1.6, 0)),
+			Color = Color3.fromRGB(120, 90, 60),
+			Material = Enum.Material.Wood,
+		})
+		rail.Parent = folder
+	end
+
+	-- inflatable kiddie pool roughly in center (low + decorative; sack flies over it)
+	local poolY = world.center.Y + Config.ArenaDefaults.PlatformThickness / 2 + 0.6
+	local poolWall = part({
+		Name = "PoolWall",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(1.2, 14, 14),
+		CFrame = CFrame.new(world.center + Vector3.new(0, poolY - world.center.Y, 12)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(255, 200, 80),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	poolWall.Parent = folder
+	local poolWater = part({
+		Name = "PoolWater",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.4, 12, 12),
+		CFrame = CFrame.new(world.center + Vector3.new(0, poolY - world.center.Y + 0.3, 12)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(80, 180, 240),
+		Material = Enum.Material.Glass,
+		CanCollide = false,
+		Transparency = 0.3,
+	})
+	poolWater.Parent = folder
+
+	-- lawn flamingos at three perimeter spots
+	for _, ang in { math.pi / 6, math.pi - math.pi / 6, -math.pi / 2 } do
+		local r = world.platformRadius - 8
+		local pos = world.center + Vector3.new(math.cos(ang) * r, 0, math.sin(ang) * r)
+		local body = part({
+			Name = "Flamingo",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(1.6, 1.4, 2.6),
+			CFrame = CFrame.new(pos + Vector3.new(0, 2.6, 0)),
+			Color = Color3.fromRGB(255, 130, 170),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		body.Parent = folder
+		local neck = part({
+			Name = "FlamingoNeck",
+			Size = Vector3.new(0.4, 2.5, 0.4),
+			CFrame = CFrame.new(pos + Vector3.new(0, 4.2, -0.6)) * CFrame.Angles(math.rad(20), 0, 0),
+			Color = Color3.fromRGB(255, 130, 170),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		neck.Parent = folder
+		local leg = part({
+			Name = "FlamingoLeg",
+			Size = Vector3.new(0.25, 2.0, 0.25),
+			CFrame = CFrame.new(pos + Vector3.new(0, 1.0, 0)),
+			Color = Color3.fromRGB(220, 100, 130),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		leg.Parent = folder
+	end
 end
 
 local function buildQuad(folder: Folder, world: Worlds.World)
@@ -615,6 +702,108 @@ local function buildQuad(folder: Folder, world: Worlds.World)
 			Material = Enum.Material.Grass,
 		})
 		canopy.Parent = folder
+	end
+
+	-- ARENA FEATURES --
+
+	-- octagonal stone fountain off-center so it doesn't block sack spawn
+	local fountainPos = world.center + Vector3.new(0, 0, 18)
+	local fountainBasin = part({
+		Name = "FountainBasin",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(2.5, 18, 18),
+		CFrame = CFrame.new(fountainPos + Vector3.new(0, 1.25, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(180, 175, 165),
+		Material = Enum.Material.Cobblestone,
+	})
+	fountainBasin.Parent = folder
+	local fountainWater = part({
+		Name = "FountainWater",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.5, 14, 14),
+		CFrame = CFrame.new(fountainPos + Vector3.new(0, 2.3, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(80, 160, 220),
+		Material = Enum.Material.Glass,
+		CanCollide = false,
+		Transparency = 0.2,
+	})
+	fountainWater.Parent = folder
+	local fountainSpire = part({
+		Name = "FountainSpire",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(8, 1.4, 1.4),
+		CFrame = CFrame.new(fountainPos + Vector3.new(0, 6.5, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(180, 175, 165),
+		Material = Enum.Material.Cobblestone,
+	})
+	fountainSpire.Parent = folder
+	-- water spout particle from the spire
+	local spoutAttach = Instance.new("Attachment")
+	spoutAttach.Position = Vector3.new(0, 4, 0)
+	spoutAttach.Parent = fountainSpire
+	local spout = Instance.new("ParticleEmitter")
+	spout.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	spout.Color = ColorSequence.new(Color3.fromRGB(150, 200, 240))
+	spout.Lifetime = NumberRange.new(1.4, 2.2)
+	spout.Rate = 80
+	spout.Speed = NumberRange.new(8, 14)
+	spout.SpreadAngle = Vector2.new(20, 20)
+	spout.Acceleration = Vector3.new(0, -10, 0)
+	spout.Size = NumberSequence.new(0.5, 0.0)
+	spout.Transparency = NumberSequence.new(0.1, 1)
+	spout.LightEmission = 0.4
+	spout.Parent = spoutAttach
+
+	-- 4 stone benches around the fountain
+	for i = 1, 4 do
+		local ang = (i - 1) * math.pi / 2 + math.pi / 4
+		local r = 18
+		local benchPos = fountainPos + Vector3.new(math.cos(ang) * r, 1.2, math.sin(ang) * r)
+		local bench = part({
+			Name = "Bench",
+			Size = Vector3.new(7, 0.6, 2.2),
+			CFrame = CFrame.new(benchPos) * CFrame.Angles(0, -ang, 0),
+			Color = Color3.fromRGB(180, 175, 165),
+			Material = Enum.Material.Cobblestone,
+		})
+		bench.Parent = folder
+		local benchLeg1 = part({
+			Name = "BenchLeg",
+			Size = Vector3.new(0.8, 1.6, 2.0),
+			CFrame = CFrame.new(benchPos + Vector3.new(math.cos(-ang) * 2.6, -1.0, math.sin(-ang) * 2.6)),
+			Color = Color3.fromRGB(150, 145, 140),
+			Material = Enum.Material.Cobblestone,
+		})
+		benchLeg1.Parent = folder
+	end
+
+	-- 4 lamp posts at +/-X and +/-Z (taller, brass-ish)
+	for i = 1, 4 do
+		local ang = (i - 1) * math.pi / 2
+		local r = world.platformRadius - 12
+		local pos = world.center + Vector3.new(math.cos(ang) * r, 0, math.sin(ang) * r)
+		local pole = part({
+			Name = "LampPole",
+			Size = Vector3.new(0.6, 14, 0.6),
+			CFrame = CFrame.new(pos + Vector3.new(0, 7, 0)),
+			Color = Color3.fromRGB(60, 50, 40),
+			Material = Enum.Material.Metal,
+		})
+		pole.Parent = folder
+		local lampHead = part({
+			Name = "Lamp",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(2, 2, 2),
+			CFrame = CFrame.new(pos + Vector3.new(0, 14.6, 0)),
+			Color = Color3.fromRGB(255, 220, 130),
+			Material = Enum.Material.Neon,
+		})
+		lampHead.Parent = folder
+		local lampLight = Instance.new("PointLight")
+		lampLight.Color = Color3.fromRGB(255, 220, 130)
+		lampLight.Brightness = 1.6
+		lampLight.Range = 18
+		lampLight.Parent = lampHead
 	end
 end
 
@@ -684,6 +873,130 @@ local function buildFratHouse(folder: Folder, world: Worlds.World)
 		})
 		rim.Parent = folder
 	end
+
+	-- ARENA FEATURES --
+
+	-- beer pong table: long brown rectangle off-center, with cup triangles at each end
+	local tablePos = world.center + Vector3.new(0, 0, 16)
+	local table_ = part({
+		Name = "PongTable",
+		Size = Vector3.new(8, 2.4, 22),
+		CFrame = CFrame.new(tablePos + Vector3.new(0, 1.2, 0)),
+		Color = Color3.fromRGB(110, 70, 40),
+		Material = Enum.Material.Wood,
+	})
+	table_.Parent = folder
+	-- triangle of cups at each end (10 cups, 4-3-2-1)
+	for endSign = -1, 1, 2 do
+		for row = 0, 3 do
+			local cupsThisRow = 4 - row
+			for c = 1, cupsThisRow do
+				local x = (c - (cupsThisRow + 1) / 2) * 1.5
+				local zOffset = endSign * (8 - row * 1.3)
+				local pos = tablePos + Vector3.new(x, 2.7, zOffset)
+				local cup = part({
+					Name = "PongCup",
+					Shape = Enum.PartType.Cylinder,
+					Size = Vector3.new(1.0, 1.0, 1.0),
+					CFrame = CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)),
+					Color = Color3.fromRGB(220, 30, 40),
+					Material = Enum.Material.SmoothPlastic,
+				})
+				cup.Parent = folder
+			end
+		end
+	end
+
+	-- 2 couches at +X and -X (red leather)
+	for _, sign in { -1, 1 } do
+		local couchPos = world.center + Vector3.new(sign * 28, 1.2, -8)
+		local seat = part({
+			Name = "Couch",
+			Size = Vector3.new(10, 1.4, 4),
+			CFrame = CFrame.new(couchPos) * CFrame.Angles(0, sign > 0 and -math.pi / 2 or math.pi / 2, 0),
+			Color = Color3.fromRGB(120, 30, 40),
+			Material = Enum.Material.Fabric,
+		})
+		seat.Parent = folder
+		local back = part({
+			Name = "CouchBack",
+			Size = Vector3.new(10, 3, 1),
+			CFrame = CFrame.new(couchPos + Vector3.new(sign * 1.5, 1.4, 0)) * CFrame.Angles(0, sign > 0 and -math.pi / 2 or math.pi / 2, 0),
+			Color = Color3.fromRGB(100, 25, 35),
+			Material = Enum.Material.Fabric,
+		})
+		back.Parent = folder
+		local arm1 = part({
+			Name = "CouchArm",
+			Size = Vector3.new(1.2, 2.5, 4),
+			CFrame = CFrame.new(couchPos + Vector3.new(0, 0.5, 4.4)) * CFrame.Angles(0, sign > 0 and -math.pi / 2 or math.pi / 2, 0),
+			Color = Color3.fromRGB(120, 30, 40),
+			Material = Enum.Material.Fabric,
+		})
+		arm1.Parent = folder
+		local arm2 = part({
+			Name = "CouchArm",
+			Size = Vector3.new(1.2, 2.5, 4),
+			CFrame = CFrame.new(couchPos + Vector3.new(0, 0.5, -4.4)) * CFrame.Angles(0, sign > 0 and -math.pi / 2 or math.pi / 2, 0),
+			Color = Color3.fromRGB(120, 30, 40),
+			Material = Enum.Material.Fabric,
+		})
+		arm2.Parent = folder
+	end
+
+	-- BBQ grill on the -Z side
+	local grillPos = world.center + Vector3.new(0, 1.5, -28)
+	local grill = part({
+		Name = "Grill",
+		Size = Vector3.new(6, 3, 4),
+		CFrame = CFrame.new(grillPos),
+		Color = Color3.fromRGB(40, 40, 40),
+		Material = Enum.Material.Metal,
+	})
+	grill.Parent = folder
+	local grillTop = part({
+		Name = "GrillLid",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(6, 3, 4),
+		CFrame = CFrame.new(grillPos + Vector3.new(0, 1.6, 0)),
+		Color = Color3.fromRGB(60, 60, 65),
+		Material = Enum.Material.Metal,
+	})
+	grillTop.Parent = folder
+	-- glowing coals
+	local coals = part({
+		Name = "Coals",
+		Size = Vector3.new(4.5, 0.4, 3),
+		CFrame = CFrame.new(grillPos + Vector3.new(0, 1, 0)),
+		Color = Color3.fromRGB(255, 90, 30),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Transparency = 0.2,
+	})
+	coals.Parent = folder
+	local coalLight = Instance.new("PointLight")
+	coalLight.Color = Color3.fromRGB(255, 110, 40)
+	coalLight.Brightness = 1.5
+	coalLight.Range = 10
+	coalLight.Parent = coals
+	-- smoke particles
+	local smokeAttach = Instance.new("Attachment")
+	smokeAttach.Position = Vector3.new(0, 2, 0)
+	smokeAttach.Parent = grillTop
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Color = ColorSequence.new(Color3.fromRGB(180, 180, 180))
+	smoke.Lifetime = NumberRange.new(2, 4)
+	smoke.Rate = 12
+	smoke.Speed = NumberRange.new(2, 4)
+	smoke.SpreadAngle = Vector2.new(15, 15)
+	smoke.Acceleration = Vector3.new(0, 3, 0)
+	smoke.Size = NumberSequence.new(1, 4)
+	smoke.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.4),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	smoke.Parent = smokeAttach
 end
 
 local function buildStadium(folder: Folder, world: Worlds.World)
@@ -741,6 +1054,101 @@ local function buildStadium(folder: Folder, world: Worlds.World)
 	})
 	boardBack.Parent = folder
 	billboard(boardBack, "SACKTOPIA STADIUM", Color3.fromRGB(255, 220, 80), Vector2.new(20, 4.5), 0)
+
+	-- ARENA FEATURES --
+
+	local platformTopY = world.center.Y + Config.ArenaDefaults.PlatformThickness / 2
+
+	-- center logo: a yellow disc with the SACKTOPIA mark
+	local logo = part({
+		Name = "FieldLogo",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.2, 26, 26),
+		CFrame = CFrame.new(world.center + Vector3.new(0, platformTopY - world.center.Y + 0.05, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(220, 200, 100),
+		Material = Enum.Material.SmoothPlastic,
+		CanCollide = false,
+	})
+	logo.Parent = folder
+	-- inner ring on the logo
+	local logoInner = part({
+		Name = "FieldLogoInner",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.25, 16, 16),
+		CFrame = CFrame.new(world.center + Vector3.new(0, platformTopY - world.center.Y + 0.06, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(40, 40, 60),
+		Material = Enum.Material.SmoothPlastic,
+		CanCollide = false,
+	})
+	logoInner.Parent = folder
+
+	-- field markings: 4 white painted radial stripes
+	for i = 1, 4 do
+		local ang = (i - 1) * math.pi / 2 + math.pi / 4
+		local stripeLen = world.platformRadius - 16
+		local stripePos = world.center + Vector3.new(
+			math.cos(ang) * (stripeLen / 2 + 16),
+			platformTopY - world.center.Y + 0.05,
+			math.sin(ang) * (stripeLen / 2 + 16)
+		)
+		local stripe = part({
+			Name = "FieldStripe",
+			Size = Vector3.new(stripeLen, 0.15, 1.2),
+			CFrame = CFrame.new(stripePos) * CFrame.Angles(0, -ang, 0),
+			Color = Color3.fromRGB(245, 245, 245),
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+		})
+		stripe.Parent = folder
+	end
+
+	-- two H-shape goal posts at +Z and -Z perimeter
+	for _, side in { -1, 1 } do
+		local zEdge = world.center.Z + side * (world.platformRadius - 6)
+		local goalY = world.center.Y + 12
+		-- two uprights
+		local crossLen = 16
+		for _, xOff in { -crossLen / 2, crossLen / 2 } do
+			local upright = part({
+				Name = "GoalUpright",
+				Size = Vector3.new(0.8, 24, 0.8),
+				CFrame = CFrame.new(world.center.X + xOff, goalY, zEdge),
+				Color = Color3.fromRGB(245, 245, 220),
+				Material = Enum.Material.Metal,
+			})
+			upright.Parent = folder
+		end
+		-- crossbar
+		local crossbar = part({
+			Name = "GoalCrossbar",
+			Size = Vector3.new(crossLen + 0.8, 0.8, 0.8),
+			CFrame = CFrame.new(world.center.X, goalY + 5, zEdge),
+			Color = Color3.fromRGB(245, 245, 220),
+			Material = Enum.Material.Metal,
+		})
+		crossbar.Parent = folder
+	end
+
+	-- two team benches behind the goal lines
+	for _, side in { -1, 1 } do
+		local benchPos = world.center + Vector3.new(side * (world.platformRadius - 8), 1, -10)
+		local bench = part({
+			Name = "TeamBench",
+			Size = Vector3.new(2, 1.4, 12),
+			CFrame = CFrame.new(benchPos),
+			Color = Color3.fromRGB(60, 70, 100),
+			Material = Enum.Material.Concrete,
+		})
+		bench.Parent = folder
+		local benchBack = part({
+			Name = "TeamBenchBack",
+			Size = Vector3.new(0.5, 3, 12),
+			CFrame = CFrame.new(benchPos + Vector3.new(side * 1, 1.5, 0)),
+			Color = Color3.fromRGB(45, 55, 80),
+			Material = Enum.Material.Concrete,
+		})
+		benchBack.Parent = folder
+	end
 end
 
 local function buildOlympus(folder: Folder, world: Worlds.World)
@@ -786,6 +1194,107 @@ local function buildOlympus(folder: Folder, world: Worlds.World)
 		})
 		cloud.Transparency = 0.2
 		cloud.Parent = folder
+	end
+
+	-- ARENA FEATURES --
+
+	local platformTopY = world.center.Y + Config.ArenaDefaults.PlatformThickness / 2
+
+	-- central altar (white marble block topped with gold disc)
+	local altar = part({
+		Name = "Altar",
+		Size = Vector3.new(8, 4, 8),
+		CFrame = CFrame.new(world.center + Vector3.new(0, 2, 18)),
+		Color = Color3.fromRGB(245, 245, 250),
+		Material = Enum.Material.Marble,
+	})
+	altar.Parent = folder
+	local altarTop = part({
+		Name = "AltarTop",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.5, 7, 7),
+		CFrame = CFrame.new(world.center + Vector3.new(0, 4.25, 18)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(245, 200, 80),
+		Material = Enum.Material.Foil,
+	})
+	altarTop.Parent = folder
+	-- eternal flame on the altar
+	local flame = part({
+		Name = "AltarFlame",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(2.5, 4, 2.5),
+		CFrame = CFrame.new(world.center + Vector3.new(0, 6.5, 18)),
+		Color = Color3.fromRGB(255, 160, 60),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Transparency = 0.15,
+	})
+	flame.Parent = folder
+	local flameLight = Instance.new("PointLight")
+	flameLight.Color = Color3.fromRGB(255, 180, 90)
+	flameLight.Brightness = 3
+	flameLight.Range = 20
+	flameLight.Parent = flame
+	-- fire particles
+	local flameAttach = Instance.new("Attachment")
+	flameAttach.Position = Vector3.new(0, 0, 0)
+	flameAttach.Parent = flame
+	local fire = Instance.new("ParticleEmitter")
+	fire.Texture = "rbxasset://textures/particles/fire_main.dds"
+	fire.Color = ColorSequence.new(Color3.fromRGB(255, 200, 100), Color3.fromRGB(255, 100, 30))
+	fire.Lifetime = NumberRange.new(0.6, 1.2)
+	fire.Rate = 30
+	fire.Speed = NumberRange.new(2, 4)
+	fire.Acceleration = Vector3.new(0, 4, 0)
+	fire.Size = NumberSequence.new(2, 0.3)
+	fire.Transparency = NumberSequence.new(0.2, 1)
+	fire.LightEmission = 0.8
+	fire.Parent = flameAttach
+
+	-- 4 raised marble platforms at corners (small jumpable pads, 2 stud high)
+	for i = 1, 4 do
+		local ang = (i - 1) * math.pi / 2 + math.pi / 4
+		local r = world.platformRadius - 18
+		local pos = world.center + Vector3.new(math.cos(ang) * r, 1, math.sin(ang) * r)
+		local pad = part({
+			Name = "MarblePad",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(2, 12, 12),
+			CFrame = CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(245, 245, 250),
+			Material = Enum.Material.Marble,
+		})
+		pad.Parent = folder
+		local trim = part({
+			Name = "MarblePadTrim",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(0.3, 12, 12),
+			CFrame = CFrame.new(pos + Vector3.new(0, 1.15, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(245, 200, 80),
+			Material = Enum.Material.Foil,
+			CanCollide = false,
+		})
+		trim.Parent = folder
+	end
+
+	-- gold radial strips on the platform from the altar to the edges
+	for i = 1, 8 do
+		local ang = (i - 1) / 8 * math.pi * 2
+		local len = world.platformRadius - 6
+		local stripPos = world.center + Vector3.new(
+			math.cos(ang) * (len / 2 + 4),
+			platformTopY - world.center.Y + 0.05,
+			math.sin(ang) * (len / 2 + 4)
+		)
+		local strip = part({
+			Name = "GoldRay",
+			Size = Vector3.new(len, 0.15, 0.6),
+			CFrame = CFrame.new(stripPos) * CFrame.Angles(0, -ang, 0),
+			Color = Color3.fromRGB(245, 200, 80),
+			Material = Enum.Material.Foil,
+			CanCollide = false,
+		})
+		strip.Parent = folder
 	end
 end
 
