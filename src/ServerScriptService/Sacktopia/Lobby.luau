@@ -1,8 +1,18 @@
 --!strict
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Config"))
+
+-- In Studio solo Play (F5), there's only one player — let them queue alone so they can
+-- actually test. Live servers still require Config.Round.MinPlayers.
+local function effectiveMinPlayers(): number
+	if RunService:IsStudio() then
+		return 1
+	end
+	return Config.Round.MinPlayers
+end
 local Ranks = require(ReplicatedStorage.Sacktopia:WaitForChild("Ranks"))
 local Remotes = require(ReplicatedStorage.Sacktopia:WaitForChild("Remotes"))
 local Worlds = require(ReplicatedStorage.Sacktopia:WaitForChild("Worlds"))
@@ -59,7 +69,7 @@ local function removeFromAllQueues(player: Player)
 				table.remove(q.players, i)
 			end
 		end
-		if #q.players < Config.Round.MinPlayers then
+		if #q.players < effectiveMinPlayers() then
 			q.autoStartAt = nil
 		end
 		broadcastQueueState(worldId)
@@ -83,7 +93,7 @@ local function tryStartMatch(worldId: string)
 	if activeMatches[worldId] then
 		return -- one match per world at a time
 	end
-	if #q.players < Config.Round.MinPlayers then
+	if #q.players < effectiveMinPlayers() then
 		q.autoStartAt = nil
 		broadcastQueueState(worldId)
 		return
@@ -151,7 +161,7 @@ local function joinQueue(player: Player, worldId: string)
 		end
 	end
 	table.insert(q.players, player)
-	if #q.players >= Config.Round.MinPlayers and not q.autoStartAt and not activeMatches[worldId] then
+	if #q.players >= effectiveMinPlayers() and not q.autoStartAt and not activeMatches[worldId] then
 		q.autoStartAt = os.clock() + Config.Lobby.QueueAutoStartSeconds
 		task.delay(Config.Lobby.QueueAutoStartSeconds, function()
 			if queues[worldId].autoStartAt then
@@ -183,6 +193,7 @@ end
 function Lobby.start()
 	-- build geometry first
 	local portals = ArenaBuilder.build()
+	local lobbySpawn = ArenaBuilder.getLobbySpawn()
 	for _, world in Worlds.List do
 		queues[world.id] = { world = world, players = {}, autoStartAt = nil }
 	end
@@ -193,8 +204,12 @@ function Lobby.start()
 	-- player lifecycle
 	local function onPlayerAdded(player: Player)
 		PlayerState.add(player)
+		-- bind respawn to the lobby spawn so default SpawnLocations can't steal them
+		if lobbySpawn then
+			player.RespawnLocation = lobbySpawn
+		end
 		player.CharacterAdded:Connect(function()
-			-- if not in a match, send to lobby
+			-- if not in a match, send to lobby (defense in depth — RespawnLocation should already do this)
 			if not isInAnyMatch(player) then
 				task.wait(0.1)
 				teleportToLobby(player)
