@@ -114,7 +114,7 @@ Items.Skins = {
 		name = "Glitter Sack",
 		rarity = "Event",
 		color = Color3.fromRGB(245, 220, 90),
-		material = Enum.Material.Sparkles,
+		material = Enum.Material.Neon,
 		transparency = 0.05,
 	} :: SackSkin,
 }
