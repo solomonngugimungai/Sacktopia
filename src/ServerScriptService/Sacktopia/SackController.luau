@@ -38,6 +38,18 @@ local function buildSackPart(): BasePart
 	return p
 end
 
+local function attachHighlight(part: BasePart): Highlight
+	local h = Instance.new("Highlight")
+	h.Name = "SackOutline"
+	h.Adornee = part
+	h.FillTransparency = 1
+	h.OutlineTransparency = 0
+	h.OutlineColor = Color3.fromRGB(255, 255, 255)
+	h.DepthMode = Enum.HighlightDepthMode.Occluded
+	h.Parent = part
+	return h
+end
+
 local function attachTrail(part: BasePart): Trail
 	local a0 = Instance.new("Attachment")
 	a0.Name = "TrailA0"
@@ -82,6 +94,7 @@ function SackController.new(arena: World, roster: { Player })
 	self.roster = roster -- only these players are valid targets
 	self.part = buildSackPart()
 	self.trail = attachTrail(self.part)
+	self.highlight = attachHighlight(self.part)
 	self.position = arena.center + Vector3.new(0, arena.sackSpawnHeight, 0)
 	self.velocity = Vector3.new(0, 0, 0)
 	self.speed = Config.Sack.BaseSpeed

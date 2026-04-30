@@ -23,6 +23,7 @@ function MatchController.new(world: World, roster: { Player })
 	self.alive = true
 	self.startedAt = 0
 	self.onEndedCallback = nil :: ((survivors: { Player }) -> ())?
+	self._connections = {} :: { RBXScriptConnection }
 	return self
 end
 
@@ -65,6 +66,39 @@ function MatchController:_recordKnockout(player: Player)
 	table.insert(self.knockoutOrder, player)
 end
 
+-- hook each roster player's Humanoid.Died so any death (sack hit, void fall, fell off
+-- platform, anything) cleanly eliminates them. Without this, falls hang the match.
+function MatchController:_hookDeaths()
+	for _, player in self.roster do
+		local function bindHumanoid(character: Model)
+			local hum = character:FindFirstChildOfClass("Humanoid")
+				or character:WaitForChild("Humanoid", 5)
+			if not hum or not hum:IsA("Humanoid") then
+				return
+			end
+			local conn
+			conn = (hum :: Humanoid).Died:Connect(function()
+				if not self.alive then
+					return
+				end
+				if PlayerState.isAlive(player) then
+					PlayerState.markOut(player)
+					self:_recordKnockout(player)
+				end
+				if conn then
+					conn:Disconnect()
+				end
+			end)
+			table.insert(self._connections, conn)
+		end
+		if player.Character then
+			bindHumanoid(player.Character)
+		end
+		local conn = player.CharacterAdded:Connect(bindHumanoid)
+		table.insert(self._connections, conn)
+	end
+end
+
 function MatchController:_alivePlayers(): { Player }
 	local out = {}
 	for _, p in self.roster do
@@ -105,6 +139,10 @@ function MatchController:_endMatch(reason: string)
 		return
 	end
 	self.alive = false
+	for _, conn in self._connections do
+		conn:Disconnect()
+	end
+	self._connections = {}
 	if self.sack then
 		self.sack:destroy()
 		self.sack = nil
@@ -151,6 +189,7 @@ function MatchController:start()
 		PlayerState.setAlive(p, true)
 	end
 	broadcast(self.world, { phase = "playing" })
+	self:_hookDeaths()
 	self.sack = SackController.new(self.world, self.roster)
 	self.sack:setOnPlayerHit(function(p: Player)
 		self:_recordKnockout(p)

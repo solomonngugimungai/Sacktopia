@@ -74,11 +74,14 @@ Config.KickFX = {
 
 -- Lobby + queue tuning
 Config.Lobby = {
-	Center = Vector3.new(0, 500, 0),
+	-- Sky lobby — high enough to see all worlds at y=0 below, like Natural Disasters
+	Center = Vector3.new(0, 1000, 0),
 	PlatformRadius = 60,
 	PlatformThickness = 4,
 	PortalRingRadius = 44,
 	PortalSize = Vector3.new(8, 0.5, 8),
+	RailingHeight = 3, -- low decorative parapet so the worlds below stay visible
+	InvisibleBarrierHeight = 26, -- transparent collision wall so nobody falls off
 	-- queue → match
 	QueueAutoStartSeconds = 6, -- once min players are queued, auto-start after this delay
 	MaxPlayersPerMatch = 14, -- hard cap on players who actually drop into a single match

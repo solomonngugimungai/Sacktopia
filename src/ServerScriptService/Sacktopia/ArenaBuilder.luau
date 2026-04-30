@@ -1,6 +1,7 @@
 --!strict
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Config"))
@@ -232,44 +233,66 @@ local function buildLobby(root: Folder)
 	cap.Transparency = 0.1
 	cap.Parent = lobbyFolder
 
-	-- enclosing wall ring with gaps where portals will be
+	-- portal angles around the perimeter
 	local portalAngles = {}
 	for i = 1, #Worlds.List do
 		local angle = (i - 1) / #Worlds.List * math.pi * 2 - math.pi / 2
 		table.insert(portalAngles, angle)
 	end
+
+	-- low decorative parapet so the worlds below stay visible (Natural Disasters style)
 	wallRing(lobbyFolder, {
 		center = center,
 		radius = r - 1,
-		height = 28,
-		thickness = 1.5,
-		segmentCount = 24,
+		height = Config.Lobby.RailingHeight,
+		thickness = 1.2,
+		segmentCount = 32,
 		color = LOBBY_DARK,
 		material = Enum.Material.SmoothPlastic,
 		topAccentColor = NEON_MAGENTA,
 		topAccentMaterial = Enum.Material.Neon,
 		gapAngles = portalAngles,
-		gapHalfWidth = math.rad(14),
+		gapHalfWidth = math.rad(11),
 	})
 
-	-- corner pillars at each gap (frame each portal)
+	-- invisible safety barrier above the parapet so nobody falls off this 1000-stud-high lobby.
+	-- Only the doorways (gaps) let players through; portals teleport them before they fall.
+	wallRing(lobbyFolder, {
+		center = center,
+		radius = r - 0.6,
+		height = Config.Lobby.InvisibleBarrierHeight,
+		thickness = 1.0,
+		segmentCount = 32,
+		color = Color3.fromRGB(255, 255, 255),
+		material = Enum.Material.ForceField,
+		gapAngles = portalAngles,
+		gapHalfWidth = math.rad(11),
+	})
+	-- (set transparency on the barrier segments now that they exist)
+	for _, child in lobbyFolder:GetChildren() do
+		if child:IsA("BasePart") and child.Material == Enum.Material.ForceField and child.Name:match("^WallSeg_") then
+			child.Transparency = 0.85
+		end
+	end
+
+	-- short pylon at each gap to frame the portal doorway visually
 	for _, angle in portalAngles do
 		for _, side in { -1, 1 } do
-			local sideAngle = angle + side * math.rad(14)
+			local sideAngle = angle + side * math.rad(11)
 			local px = math.cos(sideAngle) * (r - 1)
 			local pz = math.sin(sideAngle) * (r - 1)
 			local pillarPost = part({
 				Name = "PortalFrame",
-				Size = Vector3.new(2, 30, 2),
-				CFrame = CFrame.new(center + Vector3.new(px, 15, pz)),
+				Size = Vector3.new(1.6, 8, 1.6),
+				CFrame = CFrame.new(center + Vector3.new(px, 4, pz)),
 				Color = LOBBY_DARK,
 				Material = Enum.Material.SmoothPlastic,
 			})
 			pillarPost.Parent = lobbyFolder
 			local pl = Instance.new("PointLight")
 			pl.Color = NEON_CYAN
-			pl.Brightness = 1.5
-			pl.Range = 18
+			pl.Brightness = 1.2
+			pl.Range = 14
 			pl.Parent = pillarPost
 		end
 	end
@@ -307,6 +330,7 @@ local function buildLobby(root: Folder)
 	-- lobby title hovering above pillar
 	billboard(pillar, "SACKTOPIA", Color3.fromRGB(255, 255, 255), Vector2.new(28, 6), 24)
 	billboard(pillar, "PVP HACKY SACK", NEON_CYAN, Vector2.new(20, 2.4), 30)
+	billboard(pillar, "WALK THROUGH A PORTAL TO PLAY", Color3.fromRGB(255, 220, 255), Vector2.new(24, 2), 18)
 
 	-- ambient particle emitter on the pillar (rising sparks)
 	local emitterAttach = Instance.new("Attachment")
@@ -440,6 +464,10 @@ local function buildPortal(parent: Folder, world: Worlds.World, angle: number)
 	})
 	stepGlow.Transparency = 0.25
 	stepGlow.Parent = parent
+
+	-- subtle pulsing of the energy plane (Sine ease, looped, reverse on each cycle)
+	local pulseInfo = TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+	TweenService:Create(energy, pulseInfo, { Transparency = 0.55 }):Play()
 
 	-- swirling particles inside the doorway, attached to the energy plane
 	local emitterAttach = Instance.new("Attachment")
@@ -903,20 +931,42 @@ local function buildArenas(root: Folder)
 			world.platformMaterial
 		)
 		pad.Parent = arenaFolder
-		-- glow underglow
+		-- glow underglow — fatter and brighter so the arena reads from the sky lobby
 		local glow = disc(
 			"ArenaGlow",
 			world.center - Vector3.new(0, 1.2, 0),
-			world.platformRadius + 2,
-			0.4,
+			world.platformRadius + 8,
+			0.6,
 			world.platformColor,
 			Enum.Material.Neon
 		)
 		glow.CanCollide = false
-		glow.Transparency = 0.3
+		glow.Transparency = 0.2
 		glow.Parent = arenaFolder
+		-- beacon beam shooting up so you can find this arena from the lobby (Y = +900 from arena top)
+		local beam = part({
+			Name = "ArenaBeacon",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(900, 4, 4),
+			CFrame = CFrame.new(world.center + Vector3.new(0, 450, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = world.platformColor,
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			Transparency = 0.8,
+		})
+		beam.Parent = arenaFolder
 		-- nameplate above arena
 		billboard(pad, world.name, world.platformColor, Vector2.new(22, 4.5), world.platformRadius / 2 + 6)
+		-- giant nameplate visible from very high up
+		local skyAnchor = part({
+			Name = "SkyLabel",
+			Size = Vector3.new(0.5, 0.5, 0.5),
+			CFrame = CFrame.new(world.center + Vector3.new(0, 220, 0)),
+			Transparency = 1,
+			CanCollide = false,
+		})
+		skyAnchor.Parent = arenaFolder
+		billboard(skyAnchor, world.name:upper(), world.platformColor, Vector2.new(80, 16), 0)
 		-- themed decor
 		local builder = themeBuilders[world.id]
 		if builder then
@@ -927,12 +977,42 @@ local function buildArenas(root: Folder)
 	end
 end
 
+local function getOrMake(parent: Instance, className: string, name: string): Instance
+	local existing = parent:FindFirstChild(name)
+	if existing and existing:IsA(className) then
+		return existing
+	end
+	local inst = Instance.new(className)
+	inst.Name = name
+	inst.Parent = parent
+	return inst
+end
+
 local function tuneLightingForLobby()
-	-- gentle global tweaks; arenas at y=0 still feel daylight-ish because point lights
-	-- around the lobby take over the visuals up at y=500
 	Lighting.Ambient = Color3.fromRGB(80, 80, 100)
 	Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 140)
 	Lighting.Brightness = 2
+
+	-- bloom: makes neon parts pop dramatically
+	local bloom = getOrMake(Lighting, "BloomEffect", "SacktopiaBloom") :: BloomEffect
+	bloom.Intensity = 0.6
+	bloom.Size = 28
+	bloom.Threshold = 0.85
+
+	-- atmosphere: adds depth haze, separates the lobby from the worlds below visually
+	local atmosphere = getOrMake(Lighting, "Atmosphere", "SacktopiaAtmosphere") :: Atmosphere
+	atmosphere.Density = 0.18
+	atmosphere.Offset = 0.25
+	atmosphere.Color = Color3.fromRGB(90, 80, 110)
+	atmosphere.Decay = Color3.fromRGB(60, 50, 90)
+	atmosphere.Glare = 0.6
+	atmosphere.Haze = 1.6
+
+	-- color correction: subtle saturation + contrast bump
+	local cc = getOrMake(Lighting, "ColorCorrectionEffect", "SacktopiaColor") :: ColorCorrectionEffect
+	cc.Saturation = 0.12
+	cc.Contrast = 0.08
+	cc.Brightness = 0
 end
 
 local function disableForeignSpawns()
