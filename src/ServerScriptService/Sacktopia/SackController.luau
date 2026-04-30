@@ -316,6 +316,12 @@ function SackController:_eliminate(player: Player?, reason: string)
 				hum.Health = 0
 			end
 		end
+		-- broadcast a drop alert to all clients so they all see who dropped
+		Remotes.DropAlert:FireAllClients({
+			userId = player.UserId,
+			displayName = player.DisplayName,
+			reason = reason,
+		})
 	end
 
 	-- reset sack: lift back to spawn height, clear combo

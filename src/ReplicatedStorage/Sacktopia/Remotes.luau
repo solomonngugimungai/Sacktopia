@@ -55,6 +55,9 @@ local Remotes = {
 	-- server → match participants: match ended summary
 	-- {placement, totalPlayers, pointsEarned, totalPoints, fromTierId, toTierId}
 	MatchEnded = getOrCreate(root, "RemoteEvent", "MatchEnded") :: RemoteEvent,
+	-- server → all clients: a player let the sack drop / got hit. Payload: {userId, displayName, reason}
+	-- where reason is "ground" (sack landed) or "missed" (direct sack-to-player hit)
+	DropAlert = getOrCreate(root, "RemoteEvent", "DropAlert") :: RemoteEvent,
 }
 
 return Remotes

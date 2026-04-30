@@ -10,6 +10,7 @@ local KickFX = require(script:WaitForChild("KickFX"))
 local EquipUI = require(script:WaitForChild("EquipUI"))
 local LobbyHUD = require(script:WaitForChild("LobbyHUD"))
 local MatchSummary = require(script:WaitForChild("MatchSummary"))
+local DropAlerts = require(script:WaitForChild("DropAlerts"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -69,4 +70,5 @@ KickFX.start()
 EquipUI.start()
 LobbyHUD.start()
 MatchSummary.start()
+DropAlerts.start()
 print("[Sacktopia] client boot")
