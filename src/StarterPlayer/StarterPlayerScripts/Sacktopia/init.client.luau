@@ -23,22 +23,27 @@ local function aimDirection(): Vector3
 	return camera.CFrame.LookVector
 end
 
-local function tryDeflect()
+local function tryDeflect(source: string)
+	print(string.format("[Sacktopia] %s pressed (windowOpen=%s)", source, tostring(windowOpen)))
 	if not windowOpen then
 		return
 	end
 	Remotes.DeflectAttempt:FireServer(aimDirection(), workspace:GetServerTimeNow())
 end
 
+-- Listen to *all* keyboard input — don't gate on `processed` because Roblox's default
+-- jump action sometimes flags Space as game-processed even when the player isn't typing.
 UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
-	if processed then
+	-- skip only if the player is typing in chat / a focused TextBox
+	if processed and input.KeyCode ~= Enum.KeyCode.Space then
 		return
 	end
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.KeyCode == Enum.KeyCode.ButtonR2
-		or input.KeyCode == Enum.KeyCode.Space
-	then
-		tryDeflect()
+	if input.KeyCode == Enum.KeyCode.Space then
+		tryDeflect("SPACE")
+	elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+		tryDeflect("M1")
+	elseif input.KeyCode == Enum.KeyCode.ButtonR2 then
+		tryDeflect("R2")
 	end
 end)
 

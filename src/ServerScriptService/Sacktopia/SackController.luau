@@ -189,7 +189,7 @@ function SackController:start()
 	local target = self:_pickInitialTarget()
 	if target and target.Character and target.Character.PrimaryPart then
 		local dir = (target.Character.PrimaryPart.Position - self.position).Unit
-		self.velocity = (dir + Vector3.new(0, 0.1, 0)).Unit * self.speed
+		self.velocity = (dir + Vector3.new(0, 0.4, 0)).Unit * self.speed
 	else
 		self.velocity = Vector3.new(0, -1, 0) * self.speed
 	end
@@ -289,9 +289,8 @@ function SackController:_maybeOpenWindow()
 	end
 	local toTarget = root.Position - self.position
 	local dist = toTarget.Magnitude
-	-- closing window if too far away or sack is moving away
-	local approaching = self.velocity:Dot(toTarget) > 0
-	if dist > Config.Combat.WindowOpenDistance or not approaching then
+	-- close window only when sack is clearly out of deflect range
+	if dist > Config.Combat.WindowOpenDistance then
 		if self.windowOpenFor == target then
 			Remotes.WindowClosed:FireClient(target, self.id, "outofrange")
 			self.windowOpenFor = nil
@@ -307,6 +306,7 @@ function SackController:_maybeOpenWindow()
 		local eta = dist / math.max(self.velocity.Magnitude, 1)
 		self.predictedImpactAt = workspace:GetServerTimeNow() + eta
 		Remotes.WindowOpened:FireClient(target, self.id, self.predictedImpactAt)
+		print(string.format("[Sacktopia] window OPEN for %s (dist=%.1f, eta=%.2fs)", target.Name, dist, eta))
 	end
 end
 
@@ -358,7 +358,7 @@ function SackController:_eliminate(player: Player?, reason: string)
 		local nextTarget = self:_pickInitialTarget()
 		if nextTarget and nextTarget.Character and nextTarget.Character.PrimaryPart then
 			local dir = (nextTarget.Character.PrimaryPart.Position - self.position).Unit
-			self.velocity = (dir + Vector3.new(0, 0.1, 0)).Unit * self.speed
+			self.velocity = (dir + Vector3.new(0, 0.4, 0)).Unit * self.speed
 		else
 			self.velocity = Vector3.new(0, -1, 0) * self.speed
 		end
@@ -450,6 +450,8 @@ function SackController:_step(dt: number)
 end
 
 function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, _clientTime: number)
+	print(string.format("[Sacktopia] deflect attempt from %s (windowOpenFor=%s, alive=%s)",
+		player.Name, tostring(self.windowOpenFor and self.windowOpenFor.Name or "nil"), tostring(self.alive)))
 	if not self.alive or self.windowOpenFor ~= player then
 		return false
 	end
