@@ -337,69 +337,145 @@ end
 local function buildPortal(parent: Folder, world: Worlds.World, angle: number)
 	local center = Config.Lobby.Center
 	local r = Config.Lobby.PortalRingRadius
-	local pos = center + Vector3.new(
-		math.cos(angle) * r,
-		Config.Lobby.PlatformThickness / 2 + Config.Lobby.PortalSize.Y / 2,
-		math.sin(angle) * r
+	local floorY = center.Y + Config.Lobby.PlatformThickness / 2
+
+	-- doorway dimensions
+	local doorWidth = 9
+	local doorHeight = 14
+	local energyThickness = 0.6
+	local frameThickness = 0.7
+
+	-- portal centered vertically in front of the lobby's perimeter wall
+	local portalCenter = Vector3.new(
+		center.X + math.cos(angle) * r,
+		floorY + doorHeight / 2,
+		center.Z + math.sin(angle) * r
 	)
-	local p = part({
+	-- doorway faces the lobby center: LookVector points inward
+	local inward = Vector3.new(-math.cos(angle), 0, -math.sin(angle))
+	local portalCFrame = CFrame.lookAt(portalCenter, portalCenter + inward)
+
+	-- energy plane — players walk through this to enter
+	local energy = part({
 		Name = "Portal_" .. world.id,
-		Size = Config.Lobby.PortalSize,
-		CFrame = CFrame.new(pos),
+		Size = Vector3.new(doorWidth, doorHeight, energyThickness),
+		CFrame = portalCFrame,
 		Color = world.platformColor,
-		Material = Enum.Material.Neon,
-		Transparency = 0.2,
+		Material = Enum.Material.ForceField,
+		Transparency = 0.35,
 		CanCollide = false,
 	})
-	p.Parent = parent
+	energy.Parent = parent
 	local light = Instance.new("PointLight")
-	light.Brightness = 3
-	light.Range = 20
+	light.Brightness = 4
+	light.Range = 28
 	light.Color = world.platformColor
-	light.Parent = p
+	light.Parent = energy
 
-	-- portal arch (cylinder rotated to be a vertical hoop suggestion: two short verticals + a top horizontal)
-	local archHeight = 14
-	for _, side in { -1, 1 } do
-		local sideOffset = Vector3.new(math.cos(angle + math.pi / 2) * 3 * side, archHeight / 2, math.sin(angle + math.pi / 2) * 3 * side)
-		local pillar = part({
-			Name = "PortalArch_" .. world.id,
-			Size = Vector3.new(0.8, archHeight, 0.8),
-			CFrame = CFrame.new(pos + sideOffset - Vector3.new(0, Config.Lobby.PortalSize.Y / 2, 0)),
+	-- frame (top, left, right) — neon doorway outline
+	local frameTop = part({
+		Name = "PortalTop_" .. world.id,
+		Size = Vector3.new(doorWidth + frameThickness * 2, frameThickness, frameThickness * 1.6),
+		CFrame = portalCFrame * CFrame.new(0, doorHeight / 2 + frameThickness / 2, 0),
+		Color = world.platformColor,
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+	})
+	frameTop.Parent = parent
+	local frameLeft = part({
+		Name = "PortalLeft_" .. world.id,
+		Size = Vector3.new(frameThickness, doorHeight, frameThickness * 1.6),
+		CFrame = portalCFrame * CFrame.new(-doorWidth / 2 - frameThickness / 2, 0, 0),
+		Color = world.platformColor,
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+	})
+	frameLeft.Parent = parent
+	local frameRight = part({
+		Name = "PortalRight_" .. world.id,
+		Size = Vector3.new(frameThickness, doorHeight, frameThickness * 1.6),
+		CFrame = portalCFrame * CFrame.new(doorWidth / 2 + frameThickness / 2, 0, 0),
+		Color = world.platformColor,
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+	})
+	frameRight.Parent = parent
+
+	-- inner rim (a second slightly recessed glow ring inside the frame for depth)
+	for _, offset in { Vector3.new(0, doorHeight / 2 - 0.4, 0), Vector3.new(-doorWidth / 2 + 0.4, 0, 0), Vector3.new(doorWidth / 2 - 0.4, 0, 0) } do
+		local size: Vector3
+		if offset.Y ~= 0 then
+			size = Vector3.new(doorWidth - 0.8, 0.25, energyThickness * 0.6)
+		else
+			size = Vector3.new(0.25, doorHeight - 0.8, energyThickness * 0.6)
+		end
+		local rim = part({
+			Name = "PortalRim_" .. world.id,
+			Size = size,
+			CFrame = portalCFrame * CFrame.new(offset),
 			Color = world.platformColor,
 			Material = Enum.Material.Neon,
 			CanCollide = false,
-			Transparency = 0.1,
 		})
-		pillar.Parent = parent
+		rim.Transparency = 0.3
+		rim.Parent = parent
 	end
-	local topBar = part({
-		Name = "PortalTop_" .. world.id,
-		Size = Vector3.new(0.8, 0.8, 6.6),
-		CFrame = CFrame.new(pos + Vector3.new(0, archHeight - Config.Lobby.PortalSize.Y / 2, 0))
-			* CFrame.fromMatrix(
-				Vector3.zero,
-				Vector3.new(-math.sin(angle), 0, math.cos(angle)),
-				Vector3.new(0, 1, 0)
-			),
+
+	-- step in front of the doorway (the player approaches this from the lobby center)
+	local step = part({
+		Name = "PortalStep_" .. world.id,
+		Size = Vector3.new(doorWidth + 4, 0.4, 4),
+		CFrame = portalCFrame * CFrame.new(0, -doorHeight / 2 - 0.2, -1.8),
+		Color = LOBBY_DARK,
+		Material = Enum.Material.SmoothPlastic,
+	})
+	step.Parent = parent
+	local stepGlow = part({
+		Name = "PortalStepGlow_" .. world.id,
+		Size = Vector3.new(doorWidth + 2, 0.1, 2.5),
+		CFrame = portalCFrame * CFrame.new(0, -doorHeight / 2 + 0.05, -1.8),
 		Color = world.platformColor,
 		Material = Enum.Material.Neon,
 		CanCollide = false,
-		Transparency = 0.1,
 	})
-	topBar.Parent = parent
+	stepGlow.Transparency = 0.25
+	stepGlow.Parent = parent
 
+	-- swirling particles inside the doorway, attached to the energy plane
+	local emitterAttach = Instance.new("Attachment")
+	emitterAttach.Position = Vector3.new(0, 0, 0)
+	emitterAttach.Parent = energy
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	emitter.Color = ColorSequence.new(world.platformColor)
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.6),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	emitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	emitter.Lifetime = NumberRange.new(0.8, 1.6)
+	emitter.Rate = 50
+	emitter.Speed = NumberRange.new(2, 5)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.LightEmission = 0.9
+	emitter.Acceleration = Vector3.new(0, 2, 0)
+	emitter.Parent = emitterAttach
+
+	-- floating label above the doorway
 	local tier = Ranks.tierIndex(world.requiredTier)
 	local tierName = Config.Rank.Tiers[tier].name
 	billboard(
-		topBar,
+		frameTop,
 		string.format("%s\n%s+ • %s", world.name, tierName, world.tagline),
 		world.platformColor,
-		Vector2.new(12, 2.8),
-		3.5
+		Vector2.new(14, 3.4),
+		3
 	)
 
-	table.insert(builtPortals, { world = world, part = p })
+	table.insert(builtPortals, { world = world, part = energy })
 end
 
 -- ---- per-world arena builders ---------------------------------------------
