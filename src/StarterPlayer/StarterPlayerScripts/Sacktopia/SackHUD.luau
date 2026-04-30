@@ -60,14 +60,39 @@ local function ensureUI()
 
 	local kickHint = Instance.new("TextLabel")
 	kickHint.AnchorPoint = Vector2.new(0.5, 0.5)
-	kickHint.Position = UDim2.fromScale(0.5, 0.5)
-	kickHint.Size = UDim2.fromScale(1, 0.4)
+	kickHint.Position = UDim2.new(0.5, 0, 0.5, -10)
+	kickHint.Size = UDim2.fromScale(0.9, 0.28)
 	kickHint.BackgroundTransparency = 1
 	kickHint.Text = "KICK!"
 	kickHint.TextScaled = true
 	kickHint.Font = Enum.Font.GothamBlack
 	kickHint.TextColor3 = Color3.fromRGB(255, 255, 255)
 	kickHint.Parent = ring
+
+	-- spacebar keycap hint inside the ring
+	local key = Instance.new("Frame")
+	key.AnchorPoint = Vector2.new(0.5, 0)
+	key.Position = UDim2.new(0.5, 0, 0.55, 0)
+	key.Size = UDim2.fromOffset(64, 24)
+	key.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	key.BackgroundTransparency = 0.05
+	key.BorderSizePixel = 0
+	local keyCorner = Instance.new("UICorner")
+	keyCorner.CornerRadius = UDim.new(0, 4)
+	keyCorner.Parent = key
+	local keyStroke = Instance.new("UIStroke")
+	keyStroke.Thickness = 2
+	keyStroke.Color = Color3.fromRGB(0, 0, 0)
+	keyStroke.Parent = key
+	local keyLabel = Instance.new("TextLabel")
+	keyLabel.Size = UDim2.fromScale(1, 1)
+	keyLabel.BackgroundTransparency = 1
+	keyLabel.Font = Enum.Font.GothamBold
+	keyLabel.TextScaled = true
+	keyLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+	keyLabel.Text = "SPACE"
+	keyLabel.Parent = key
+	key.Parent = ring
 
 	local state = Instance.new("TextLabel")
 	state.AnchorPoint = Vector2.new(0.5, 0)

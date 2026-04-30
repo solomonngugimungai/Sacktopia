@@ -255,25 +255,26 @@ function SackController:_predictImpact(player: Player): number?
 end
 
 function SackController:_chooseTarget()
+	-- Pick the closest alive player to the sack; distance-based is robust to gravity arcs.
 	local best: Player? = nil
-	local bestEta = math.huge
+	local bestDist = math.huge
 	for _, p in self:_aliveRoster() do
-		local eta = self:_predictImpact(p)
-		if eta and eta < bestEta then
+		local root = characterRoot(p)
+		if not root then
+			continue
+		end
+		local d = (root.Position - self.position).Magnitude
+		if d < bestDist then
 			best = p
-			bestEta = eta
+			bestDist = d
 		end
 	end
 	if best ~= self.target then
-		-- closing previous window if open
 		if self.windowOpenFor then
 			Remotes.WindowClosed:FireClient(self.windowOpenFor, self.id, "retargeted")
 			self.windowOpenFor = nil
 		end
 		self.target = best
-		self.predictedImpactAt = bestEta < math.huge and (workspace:GetServerTimeNow() + bestEta) or 0
-	elseif best then
-		self.predictedImpactAt = workspace:GetServerTimeNow() + bestEta
 	end
 end
 
@@ -282,13 +283,30 @@ function SackController:_maybeOpenWindow()
 	if not target then
 		return
 	end
-	local now = workspace:GetServerTimeNow()
-	local timeToImpact = self.predictedImpactAt - now
-	if timeToImpact <= Config.Combat.WindowOpenLead and timeToImpact > Config.Combat.WindowCloseLead then
-		if self.windowOpenFor ~= target then
-			self.windowOpenFor = target
-			Remotes.WindowOpened:FireClient(target, self.id, self.predictedImpactAt)
+	local root = characterRoot(target)
+	if not root then
+		return
+	end
+	local toTarget = root.Position - self.position
+	local dist = toTarget.Magnitude
+	-- closing window if too far away or sack is moving away
+	local approaching = self.velocity:Dot(toTarget) > 0
+	if dist > Config.Combat.WindowOpenDistance or not approaching then
+		if self.windowOpenFor == target then
+			Remotes.WindowClosed:FireClient(target, self.id, "outofrange")
+			self.windowOpenFor = nil
 		end
+		return
+	end
+	if dist <= Config.Sack.HitRadius then
+		return -- _checkHit will fire — let it handle elimination, not us
+	end
+	if self.windowOpenFor ~= target then
+		self.windowOpenFor = target
+		-- estimate impact time so the timing-ring UI has something to count down against
+		local eta = dist / math.max(self.velocity.Magnitude, 1)
+		self.predictedImpactAt = workspace:GetServerTimeNow() + eta
+		Remotes.WindowOpened:FireClient(target, self.id, self.predictedImpactAt)
 	end
 end
 

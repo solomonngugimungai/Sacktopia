@@ -21,7 +21,13 @@ Config.Sack = {
 }
 
 Config.Combat = {
-	-- timing window in seconds before predicted impact during which a click counts as a deflect
+	-- DISTANCE-BASED deflect window (Blade Ball style). The window opens whenever the
+	-- sack is within WindowOpenDistance studs of the targeted player AND moving toward
+	-- them, and stays open until either: a successful deflect, the sack passes by, or
+	-- the sack reaches HitRadius (= the player got sacked). ETA-based timing was
+	-- unreliable once gravity arced the sack.
+	WindowOpenDistance = 18,
+	-- legacy lead times — kept for the timing-ring UI animation only
 	WindowOpenLead = 0.45,
 	WindowCloseLead = 0.05,
 	-- combo
