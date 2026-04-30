@@ -5,10 +5,11 @@ local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Config"))
 
--- In Studio solo Play (F5), there's only one player — let them queue alone so they can
--- actually test. Live servers still require Config.Round.MinPlayers.
+-- In Studio solo Play (F5) there's only one player — let them queue alone so they can
+-- test. The moment a second player joins (multi-client test), require the real Config min
+-- so the queue actually waits for both. Live servers always use Config.Round.MinPlayers.
 local function effectiveMinPlayers(): number
-	if RunService:IsStudio() then
+	if RunService:IsStudio() and #Players:GetPlayers() < 2 then
 		return 1
 	end
 	return Config.Round.MinPlayers
