@@ -109,6 +109,7 @@ function SackController.new(arena: World, roster: { Player })
 	self._cycleT = 0
 	self._activeSkin = Items.getSkin("Classic") :: Items.SackSkin
 	self._onPlayerHit = nil :: ((player: Player) -> ())?
+	self._resetting = false -- true while sack is between plays (post-elimination respawn)
 	applySkin(self.part, self._activeSkin)
 	self.part.Position = self.position
 	self.part.Parent = Workspace
@@ -219,11 +220,7 @@ function SackController:_clampInBounds()
 		self.velocity = Vector3.new(reflected.X * 0.7, v.Y, reflected.Z * 0.7)
 		self.position = center + inward * -1 * self.arena.boundsRadius + Vector3.new(0, self.position.Y - center.Y, 0)
 	end
-	if self.position.Y < center.Y - 5 then
-		-- floor bounce so the sack doesn't fall through the world if no terrain
-		self.position = Vector3.new(self.position.X, center.Y - 5, self.position.Z)
-		self.velocity = Vector3.new(self.velocity.X * 0.8, math.abs(self.velocity.Y) * 0.5, self.velocity.Z * 0.8)
-	end
+	-- (no floor bounce — ground-touch elimination is handled in _checkGroundTouch)
 	if self.position.Y > center.Y + self.arena.boundsHeight then
 		self.position = Vector3.new(self.position.X, center.Y + self.arena.boundsHeight, self.position.Z)
 		self.velocity = Vector3.new(self.velocity.X, -math.abs(self.velocity.Y), self.velocity.Z)
@@ -295,6 +292,56 @@ function SackController:_maybeOpenWindow()
 	end
 end
 
+-- shared eliminate-and-reset used by both direct sack hits and ground-touch falls
+function SackController:_eliminate(player: Player?, reason: string)
+	if self._resetting then
+		return
+	end
+	self._resetting = true
+
+	if self.windowOpenFor then
+		Remotes.WindowClosed:FireClient(self.windowOpenFor, self.id, reason)
+		self.windowOpenFor = nil
+	end
+
+	if player then
+		Remotes.Eliminated:FireClient(player)
+		PlayerState.markOut(player)
+		if self._onPlayerHit then
+			self._onPlayerHit(player)
+		end
+		if player.Character then
+			local hum = player.Character:FindFirstChildOfClass("Humanoid")
+			if hum then
+				hum.Health = 0
+			end
+		end
+	end
+
+	-- reset sack: lift back to spawn height, clear combo
+	self.target = nil
+	self.lastDeflector = nil
+	self.consecutiveByLast = 0
+	self.position = self.arena.center + Vector3.new(0, self.arena.sackSpawnHeight, 0)
+	self.velocity = Vector3.new(0, 0, 0)
+	self.speed = Config.Sack.BaseSpeed
+	self.part.Position = self.position
+
+	task.delay(0.6, function()
+		if not self.alive then
+			return
+		end
+		local nextTarget = self:_pickInitialTarget()
+		if nextTarget and nextTarget.Character and nextTarget.Character.PrimaryPart then
+			local dir = (nextTarget.Character.PrimaryPart.Position - self.position).Unit
+			self.velocity = (dir + Vector3.new(0, 0.1, 0)).Unit * self.speed
+		else
+			self.velocity = Vector3.new(0, -1, 0) * self.speed
+		end
+		self._resetting = false
+	end)
+end
+
 function SackController:_checkHit()
 	local target = self.target
 	if not target then
@@ -306,36 +353,35 @@ function SackController:_checkHit()
 	end
 	local dist = (root.Position - self.position).Magnitude
 	if dist <= Config.Sack.HitRadius then
-		-- impact reached — if window was open, this is a miss; eliminate
-		if self.windowOpenFor == target then
-			Remotes.WindowClosed:FireClient(target, self.id, "missed")
-			self.windowOpenFor = nil
-		end
-		Remotes.Eliminated:FireClient(target)
-		PlayerState.markOut(target)
-		if self._onPlayerHit then
-			self._onPlayerHit(target)
-		end
-		if target.Character then
-			local hum = target.Character:FindFirstChildOfClass("Humanoid")
-			if hum then
-				hum.Health = 0
-			end
-		end
-		self.target = nil
-		self.lastDeflector = nil
-		self.consecutiveByLast = 0
-		-- pick a new target after a beat
-		task.delay(0.4, function()
-			if self.alive then
-				self:_chooseTarget()
-				if not self.target then
-					-- nobody left to target; bounce gently
-					self.velocity = Vector3.new(0, math.abs(self.velocity.Y) + 5, 0)
-				end
-			end
-		end)
+		self:_eliminate(target, "missed")
 	end
+end
+
+-- Blade-Ball-style ground-touch elimination: if the sack falls to the floor without
+-- being deflected, the player it was targeting (or last deflector if no current target)
+-- is out, then the sack resets above center for the next play.
+function SackController:_checkGroundTouch()
+	local center = self.arena.center
+	local groundY = center.Y + Config.ArenaDefaults.PlatformThickness / 2 + Config.Sack.Radius
+	-- only fire when descending into the ground plane
+	if self.position.Y > groundY or self.velocity.Y > 0 then
+		return
+	end
+	-- only count it as "ground" if we're roughly over the platform (not in the void past bounds)
+	local horizDist = Vector3.new(self.position.X - center.X, 0, self.position.Z - center.Z).Magnitude
+	if horizDist > self.arena.platformRadius then
+		return -- went over the edge; let it keep falling, the bounds clamp will handle it
+	end
+
+	-- pick the player to eliminate: current target preferred, else last deflector
+	local victim: Player? = nil
+	if self.target and PlayerState.isAlive(self.target) then
+		victim = self.target
+	elseif self.lastDeflector and PlayerState.isAlive(self.lastDeflector) then
+		victim = self.lastDeflector
+	end
+
+	self:_eliminate(victim, "ground")
 end
 
 function SackController:_broadcastSnapshot()
@@ -356,6 +402,12 @@ function SackController:_step(dt: number)
 	if not self.alive then
 		return
 	end
+	-- frozen mid-respawn — keep replicating the held position but skip integration / hits
+	if self._resetting then
+		self._tickSkinCycle(dt)
+		self:_broadcastSnapshot()
+		return
+	end
 	-- integrate gravity + drag, then update part
 	local v = self.velocity
 	v = v + Vector3.new(0, -Config.Sack.Gravity * dt, 0)
@@ -369,6 +421,7 @@ function SackController:_step(dt: number)
 	self:_chooseTarget()
 	self:_maybeOpenWindow()
 	self:_checkHit()
+	self:_checkGroundTouch()
 	self:_broadcastSnapshot()
 end
 
