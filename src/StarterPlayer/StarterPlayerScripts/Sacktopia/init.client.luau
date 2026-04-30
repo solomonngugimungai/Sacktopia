@@ -6,6 +6,8 @@ local Workspace = game:GetService("Workspace")
 
 local Remotes = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Remotes"))
 local SackHUD = require(script:WaitForChild("SackHUD"))
+local KickFX = require(script:WaitForChild("KickFX"))
+local EquipUI = require(script:WaitForChild("EquipUI"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -61,4 +63,6 @@ Remotes.Eliminated.OnClientEvent:Connect(function()
 end)
 
 SackHUD.start()
+KickFX.start()
+EquipUI.start()
 print("[Sacktopia] client boot")

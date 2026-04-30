@@ -40,4 +40,36 @@ Config.Arena = {
 	BoundsHeight = 80,
 }
 
+-- Cosmetic-only equippable slots. Mechanic-changing items would mean pay-to-win;
+-- v2 deliberately keeps every item visual.
+Config.Slots = {
+	"Head",
+	"Hand",
+	"SackSkin",
+}
+
+Config.Trail = {
+	Lifetime = 0.6,
+	WidthScaleStart = 1.4,
+	WidthScaleEnd = 0.0,
+	NeutralColor = Color3.fromRGB(255, 255, 255),
+}
+
+Config.Equip = {
+	-- v2: in-memory inventory only. Persistence (DataStore) lands in v3.
+	GrantAllOnJoin = true,
+	DefaultLoadout = {
+		Head = "BasicCap",
+		Hand = "None",
+		SackSkin = "Classic",
+	},
+}
+
+Config.KickFX = {
+	-- procedural R15 kick: how far to swing the right leg forward (radians) and how long
+	SwingAngleRadians = math.rad(70),
+	SwingOutSeconds = 0.08,
+	SwingBackSeconds = 0.16,
+}
+
 return Config

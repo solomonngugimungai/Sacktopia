@@ -5,7 +5,9 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Config"))
+local Items = require(ReplicatedStorage.Sacktopia:WaitForChild("Items"))
 local Remotes = require(ReplicatedStorage.Sacktopia:WaitForChild("Remotes"))
+local Inventory = require(script.Parent:WaitForChild("Inventory"))
 local PlayerState = require(script.Parent.PlayerState)
 
 type Vec3 = Vector3
@@ -33,6 +35,40 @@ local function buildSackPart(): BasePart
 	return p
 end
 
+local function attachTrail(part: BasePart): Trail
+	local a0 = Instance.new("Attachment")
+	a0.Name = "TrailA0"
+	a0.Position = Vector3.new(0, Config.Sack.Radius * 0.4, 0)
+	a0.Parent = part
+	local a1 = Instance.new("Attachment")
+	a1.Name = "TrailA1"
+	a1.Position = Vector3.new(0, -Config.Sack.Radius * 0.4, 0)
+	a1.Parent = part
+	local trail = Instance.new("Trail")
+	trail.Name = "SackTrail"
+	trail.Attachment0 = a0
+	trail.Attachment1 = a1
+	trail.Lifetime = Config.Trail.Lifetime
+	trail.WidthScale = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, Config.Trail.WidthScaleStart),
+		NumberSequenceKeypoint.new(1, Config.Trail.WidthScaleEnd),
+	})
+	trail.Color = ColorSequence.new(Config.Trail.NeutralColor)
+	trail.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.2),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	trail.LightEmission = 0.4
+	trail.Parent = part
+	return trail
+end
+
+local function applySkin(part: BasePart, skin: Items.SackSkin)
+	part.Color = skin.color
+	part.Material = skin.material
+	part.Transparency = skin.transparency
+end
+
 function SackController.new()
 	local self = setmetatable({}, SackController)
 	self.id = (function()
@@ -40,6 +76,7 @@ function SackController.new()
 		return nextSackId
 	end)()
 	self.part = buildSackPart()
+	self.trail = attachTrail(self.part)
 	self.position = Config.Arena.Center + Vector3.new(0, Config.Sack.SpawnHeight, 0)
 	self.velocity = Vector3.new(0, 0, 0)
 	self.speed = Config.Sack.BaseSpeed
@@ -51,9 +88,41 @@ function SackController.new()
 	self.alive = true
 	self._heartbeatConn = nil :: RBXScriptConnection?
 	self._lastSnapshot = 0
+	self._cycleT = 0
+	self._activeSkin = Items.getSkin("Classic") :: Items.SackSkin
+	applySkin(self.part, self._activeSkin)
 	self.part.Position = self.position
 	self.part.Parent = Workspace
 	return self
+end
+
+function SackController:_setHolderSkin(player: Player)
+	local equipped = Inventory.getEquipped(player, "SackSkin")
+	local skin = equipped and Items.getSkin(equipped) or Items.getSkin("Classic")
+	if skin and skin ~= self._activeSkin then
+		self._activeSkin = skin
+		applySkin(self.part, skin)
+	end
+	-- recolor trail to skin color
+	if self.trail then
+		self.trail.Color = ColorSequence.new(self._activeSkin.color)
+	end
+end
+
+function SackController:_tickSkinCycle(dt: number)
+	local skin = self._activeSkin
+	if not skin or not skin.cycleColors or not skin.cycleSpeed then
+		return
+	end
+	self._cycleT += dt * skin.cycleSpeed
+	local n = #skin.cycleColors
+	local t = self._cycleT % n
+	local i = math.floor(t) + 1
+	local nextI = (i % n) + 1
+	local frac = t - math.floor(t)
+	local a = skin.cycleColors[i]
+	local b = skin.cycleColors[nextI]
+	self.part.Color = a:Lerp(b, frac)
 end
 
 function SackController:destroy()
@@ -253,6 +322,7 @@ function SackController:_step(dt: number)
 	self:_clampInBounds()
 	self.part.Position = self.position
 
+	self:_tickSkinCycle(dt)
 	self:_chooseTarget()
 	self:_maybeOpenWindow()
 	self:_checkHit()
@@ -295,6 +365,12 @@ function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, 
 	end
 	self.velocity = dir * newSpeed
 	self.target = nil -- force retarget next step based on new velocity
+
+	-- visual: adopt the deflector's chosen sack skin
+	self:_setHolderSkin(player)
+	-- broadcast a kick FX cue so all clients animate that player's leg
+	Remotes.KickFX:FireAllClients(player, dir)
+
 	self:_broadcastSnapshot()
 	return true
 end

@@ -37,6 +37,12 @@ local Remotes = {
 	SackState = getOrCreate(root, "RemoteEvent", "SackState") :: RemoteEvent,
 	-- server → eliminated player: you are out
 	Eliminated = getOrCreate(root, "RemoteEvent", "Eliminated") :: RemoteEvent,
+	-- client → server: equip an item id into a slot ("Head"|"Hand"|"SackSkin")
+	EquipItem = getOrCreate(root, "RemoteEvent", "EquipItem") :: RemoteEvent,
+	-- server → owning client: full inventory + current loadout snapshot
+	InventoryUpdated = getOrCreate(root, "RemoteEvent", "InventoryUpdated") :: RemoteEvent,
+	-- server → all: a player just successfully deflected — clients play kick FX on that character
+	KickFX = getOrCreate(root, "RemoteEvent", "KickFX") :: RemoteEvent,
 }
 
 return Remotes
