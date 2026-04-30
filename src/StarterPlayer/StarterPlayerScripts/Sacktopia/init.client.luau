@@ -8,6 +8,8 @@ local Remotes = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild
 local SackHUD = require(script:WaitForChild("SackHUD"))
 local KickFX = require(script:WaitForChild("KickFX"))
 local EquipUI = require(script:WaitForChild("EquipUI"))
+local LobbyHUD = require(script:WaitForChild("LobbyHUD"))
+local MatchSummary = require(script:WaitForChild("MatchSummary"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -65,4 +67,6 @@ end)
 SackHUD.start()
 KickFX.start()
 EquipUI.start()
+LobbyHUD.start()
+MatchSummary.start()
 print("[Sacktopia] client boot")

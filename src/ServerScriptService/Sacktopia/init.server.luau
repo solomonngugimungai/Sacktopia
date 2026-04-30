@@ -1,8 +1,10 @@
+local PlayerStats = require(script:WaitForChild("PlayerStats"))
 local Inventory = require(script:WaitForChild("Inventory"))
 local EquipController = require(script:WaitForChild("EquipController"))
-local RoundManager = require(script:WaitForChild("RoundManager"))
+local Lobby = require(script:WaitForChild("Lobby"))
 
 print("[Sacktopia] server boot")
+PlayerStats.start()
 Inventory.start()
 EquipController.start()
-RoundManager.start()
+Lobby.start()

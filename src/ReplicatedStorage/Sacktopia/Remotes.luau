@@ -43,6 +43,18 @@ local Remotes = {
 	InventoryUpdated = getOrCreate(root, "RemoteEvent", "InventoryUpdated") :: RemoteEvent,
 	-- server → all: a player just successfully deflected — clients play kick FX on that character
 	KickFX = getOrCreate(root, "RemoteEvent", "KickFX") :: RemoteEvent,
+	-- server → owning client: stats snapshot {wins, top3, points, matchesPlayed, tierId}
+	StatsUpdated = getOrCreate(root, "RemoteEvent", "StatsUpdated") :: RemoteEvent,
+	-- server → owning client: a player ranked up {fromTierId, toTierId}
+	RankUp = getOrCreate(root, "RemoteEvent", "RankUp") :: RemoteEvent,
+	-- client → server: ask to join (or leave) a world's queue {worldId}
+	JoinQueue = getOrCreate(root, "RemoteEvent", "JoinQueue") :: RemoteEvent,
+	LeaveQueue = getOrCreate(root, "RemoteEvent", "LeaveQueue") :: RemoteEvent,
+	-- server → all: queue snapshot per world {worldId, count, secondsToStart?}
+	QueueState = getOrCreate(root, "RemoteEvent", "QueueState") :: RemoteEvent,
+	-- server → match participants: match ended summary
+	-- {placement, totalPlayers, pointsEarned, totalPoints, fromTierId, toTierId}
+	MatchEnded = getOrCreate(root, "RemoteEvent", "MatchEnded") :: RemoteEvent,
 }
 
 return Remotes

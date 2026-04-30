@@ -72,4 +72,45 @@ Config.KickFX = {
 	SwingBackSeconds = 0.16,
 }
 
+-- Lobby + queue tuning
+Config.Lobby = {
+	Center = Vector3.new(0, 500, 0),
+	PlatformRadius = 60,
+	PlatformThickness = 4,
+	PortalRingRadius = 44,
+	PortalSize = Vector3.new(8, 0.5, 8),
+	-- queue → match
+	QueueAutoStartSeconds = 6, -- once min players are queued, auto-start after this delay
+	MaxPlayersPerMatch = 8,
+}
+
+-- Default per-arena bounds (override per world in Worlds.luau)
+Config.ArenaDefaults = {
+	BoundsRadius = 120,
+	BoundsHeight = 80,
+	SpawnRadius = 22,
+	SackSpawnHeight = 18,
+	PlatformRadius = 90,
+	PlatformThickness = 4,
+}
+
+-- Hybrid points — wins worth most, top-3 still pays out, all participants get something.
+-- Tweak Tiers thresholds to retune progression speed.
+Config.Rank = {
+	Points = {
+		[1] = 10, -- 1st place
+		[2] = 4,  -- 2nd
+		[3] = 2,  -- 3rd
+		Participation = 1, -- everyone else
+	},
+	Tiers = {
+		{ id = "Bronze",   name = "Bronze",   minPoints = 0,    color = Color3.fromRGB(180, 110, 60) },
+		{ id = "Silver",   name = "Silver",   minPoints = 50,   color = Color3.fromRGB(190, 190, 200) },
+		{ id = "Gold",     name = "Gold",     minPoints = 200,  color = Color3.fromRGB(240, 200, 70) },
+		{ id = "Platinum", name = "Platinum", minPoints = 500,  color = Color3.fromRGB(140, 220, 220) },
+		{ id = "Diamond",  name = "Diamond",  minPoints = 1500, color = Color3.fromRGB(120, 200, 255) },
+		{ id = "Master",   name = "Master",   minPoints = 5000, color = Color3.fromRGB(220, 100, 240) },
+	},
+}
+
 return Config

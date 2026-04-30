@@ -7,8 +7,11 @@ local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Config"))
 local Items = require(ReplicatedStorage.Sacktopia:WaitForChild("Items"))
 local Remotes = require(ReplicatedStorage.Sacktopia:WaitForChild("Remotes"))
+local Worlds = require(ReplicatedStorage.Sacktopia:WaitForChild("Worlds"))
 local Inventory = require(script.Parent:WaitForChild("Inventory"))
 local PlayerState = require(script.Parent.PlayerState)
+
+type World = Worlds.World
 
 type Vec3 = Vector3
 
@@ -69,15 +72,17 @@ local function applySkin(part: BasePart, skin: Items.SackSkin)
 	part.Transparency = skin.transparency
 end
 
-function SackController.new()
+function SackController.new(arena: World, roster: { Player })
 	local self = setmetatable({}, SackController)
 	self.id = (function()
 		nextSackId += 1
 		return nextSackId
 	end)()
+	self.arena = arena
+	self.roster = roster -- only these players are valid targets
 	self.part = buildSackPart()
 	self.trail = attachTrail(self.part)
-	self.position = Config.Arena.Center + Vector3.new(0, Config.Sack.SpawnHeight, 0)
+	self.position = arena.center + Vector3.new(0, arena.sackSpawnHeight, 0)
 	self.velocity = Vector3.new(0, 0, 0)
 	self.speed = Config.Sack.BaseSpeed
 	self.lastDeflector = nil :: Player?
@@ -90,10 +95,16 @@ function SackController.new()
 	self._lastSnapshot = 0
 	self._cycleT = 0
 	self._activeSkin = Items.getSkin("Classic") :: Items.SackSkin
+	self._onPlayerHit = nil :: ((player: Player) -> ())?
 	applySkin(self.part, self._activeSkin)
 	self.part.Position = self.position
 	self.part.Parent = Workspace
 	return self
+end
+
+-- MatchController registers a callback so it can record placement order
+function SackController:setOnPlayerHit(fn: (player: Player) -> ())
+	self._onPlayerHit = fn
 end
 
 function SackController:_setHolderSkin(player: Player)
@@ -127,6 +138,10 @@ end
 
 function SackController:destroy()
 	self.alive = false
+	if self.windowOpenFor then
+		Remotes.WindowClosed:FireClient(self.windowOpenFor, self.id, "matchend")
+		self.windowOpenFor = nil
+	end
 	if self._heartbeatConn then
 		self._heartbeatConn:Disconnect()
 		self._heartbeatConn = nil
@@ -137,8 +152,18 @@ function SackController:destroy()
 	end
 end
 
+function SackController:_aliveRoster(): { Player }
+	local out = {}
+	for _, p in self.roster do
+		if PlayerState.isAlive(p) and p.Character then
+			table.insert(out, p)
+		end
+	end
+	return out
+end
+
 function SackController:_pickInitialTarget()
-	local candidates = PlayerState.alivePlayers()
+	local candidates = self:_aliveRoster()
 	if #candidates == 0 then
 		return nil
 	end
@@ -169,30 +194,33 @@ local function characterRoot(player: Player): BasePart?
 end
 
 function SackController:_clampInBounds()
-	local center = Config.Arena.Center
+	local center = self.arena.center
 	local horiz = Vector3.new(self.position.X - center.X, 0, self.position.Z - center.Z)
 	local horizDist = horiz.Magnitude
-	if horizDist > Config.Arena.BoundsRadius then
+	if horizDist > self.arena.boundsRadius then
 		-- soft wrap: reflect velocity inward and clamp position to boundary
 		local inward = -horiz.Unit
 		local v = self.velocity
 		local horizV = Vector3.new(v.X, 0, v.Z)
 		local reflected = horizV - 2 * horizV:Dot(inward * -1) * (inward * -1)
 		self.velocity = Vector3.new(reflected.X * 0.7, v.Y, reflected.Z * 0.7)
-		self.position = center + inward * -1 * Config.Arena.BoundsRadius + Vector3.new(0, self.position.Y - center.Y, 0)
+		self.position = center + inward * -1 * self.arena.boundsRadius + Vector3.new(0, self.position.Y - center.Y, 0)
 	end
 	if self.position.Y < center.Y - 5 then
 		-- floor bounce so the sack doesn't fall through the world if no terrain
 		self.position = Vector3.new(self.position.X, center.Y - 5, self.position.Z)
 		self.velocity = Vector3.new(self.velocity.X * 0.8, math.abs(self.velocity.Y) * 0.5, self.velocity.Z * 0.8)
 	end
-	if self.position.Y > center.Y + Config.Arena.BoundsHeight then
-		self.position = Vector3.new(self.position.X, center.Y + Config.Arena.BoundsHeight, self.position.Z)
+	if self.position.Y > center.Y + self.arena.boundsHeight then
+		self.position = Vector3.new(self.position.X, center.Y + self.arena.boundsHeight, self.position.Z)
 		self.velocity = Vector3.new(self.velocity.X, -math.abs(self.velocity.Y), self.velocity.Z)
 	end
 end
 
 function SackController:_predictImpact(player: Player): number?
+	if not PlayerState.isAlive(player) then
+		return nil
+	end
 	local root = characterRoot(player)
 	if not root then
 		return nil
@@ -219,7 +247,7 @@ end
 function SackController:_chooseTarget()
 	local best: Player? = nil
 	local bestEta = math.huge
-	for _, p in PlayerState.alivePlayers() do
+	for _, p in self:_aliveRoster() do
 		local eta = self:_predictImpact(p)
 		if eta and eta < bestEta then
 			best = p
@@ -272,7 +300,9 @@ function SackController:_checkHit()
 		end
 		Remotes.Eliminated:FireClient(target)
 		PlayerState.markOut(target)
-		-- Fire eliminated event on character so RoundManager can react
+		if self._onPlayerHit then
+			self._onPlayerHit(target)
+		end
 		if target.Character then
 			local hum = target.Character:FindFirstChildOfClass("Humanoid")
 			if hum then
