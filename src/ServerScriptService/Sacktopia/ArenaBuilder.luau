@@ -770,6 +770,100 @@ local function buildBackyard(folder: Folder, world: Worlds.World)
 		})
 		beard.Parent = folder
 	end
+
+	-- BACKYARD ENVIRONMENT (surrounding scene that isolates the arena) --
+
+	-- Big house facade behind the platform (-Z direction). Replaces the small distant house.
+	local houseCenter = world.center + Vector3.new(0, 0, -world.platformRadius - 80)
+	local houseBody = part({
+		Name = "BackdropHouseBody",
+		Size = Vector3.new(80, 40, 50),
+		CFrame = CFrame.new(houseCenter + Vector3.new(0, 20, 0)),
+		Color = Color3.fromRGB(220, 200, 170),
+		Material = Enum.Material.Plaster,
+	})
+	houseBody.Parent = folder
+	local houseRoof = part({
+		Name = "BackdropHouseRoof",
+		Size = Vector3.new(86, 20, 56),
+		CFrame = CFrame.new(houseCenter + Vector3.new(0, 50, 0)),
+		Color = Color3.fromRGB(150, 70, 60),
+		Material = Enum.Material.Slate,
+	})
+	houseRoof.Parent = folder
+	-- house front door + windows
+	local door = part({
+		Name = "BackdropDoor",
+		Size = Vector3.new(8, 14, 0.8),
+		CFrame = CFrame.new(houseCenter + Vector3.new(0, 7, 25)),
+		Color = Color3.fromRGB(80, 50, 30),
+		Material = Enum.Material.Wood,
+	})
+	door.Parent = folder
+	for _, dx in { -22, 22 } do
+		for _, dy in { 14, 30 } do
+			local window = part({
+				Name = "BackdropWindow",
+				Size = Vector3.new(10, 8, 0.5),
+				CFrame = CFrame.new(houseCenter + Vector3.new(dx, dy, 25)),
+				Color = Color3.fromRGB(180, 220, 240),
+				Material = Enum.Material.Glass,
+				Transparency = 0.3,
+			})
+			window.Parent = folder
+		end
+	end
+
+	-- side fence walls extending out (+/-X)
+	for _, sx in { -1, 1 } do
+		local fence = part({
+			Name = "BackdropFence",
+			Size = Vector3.new(0.6, 6, 200),
+			CFrame = CFrame.new(world.center + Vector3.new(sx * (world.platformRadius + 30), 3, 0)),
+			Color = Color3.fromRGB(240, 240, 230),
+			Material = Enum.Material.Wood,
+		})
+		fence.Parent = folder
+	end
+
+	-- neighbor house silhouettes further out
+	for _, sx in { -1, 1 } do
+		local nbCenter = world.center + Vector3.new(sx * (world.platformRadius + 90), 0, -30)
+		local nbBody = part({
+			Name = "NeighborHouse",
+			Size = Vector3.new(40, 30, 35),
+			CFrame = CFrame.new(nbCenter + Vector3.new(0, 15, 0)),
+			Color = (sx > 0) and Color3.fromRGB(190, 170, 150) or Color3.fromRGB(170, 195, 180),
+			Material = Enum.Material.Plaster,
+		})
+		nbBody.Parent = folder
+		local nbRoof = part({
+			Name = "NeighborRoof",
+			Size = Vector3.new(44, 14, 39),
+			CFrame = CFrame.new(nbCenter + Vector3.new(0, 36, 0)),
+			Color = Color3.fromRGB(120, 60, 50),
+			Material = Enum.Material.Slate,
+		})
+		nbRoof.Parent = folder
+	end
+
+	-- garage on the -X side of the main house
+	local garage = part({
+		Name = "BackdropGarage",
+		Size = Vector3.new(30, 22, 30),
+		CFrame = CFrame.new(houseCenter + Vector3.new(-55, 11, 5)),
+		Color = Color3.fromRGB(200, 180, 150),
+		Material = Enum.Material.Plaster,
+	})
+	garage.Parent = folder
+	local garageDoor = part({
+		Name = "BackdropGarageDoor",
+		Size = Vector3.new(20, 14, 0.6),
+		CFrame = CFrame.new(houseCenter + Vector3.new(-55, 7, 20)),
+		Color = Color3.fromRGB(200, 200, 200),
+		Material = Enum.Material.Metal,
+	})
+	garageDoor.Parent = folder
 end
 
 local function buildQuad(folder: Folder, world: Worlds.World)
@@ -1073,6 +1167,118 @@ local function buildQuad(folder: Folder, world: Worlds.World)
 		})
 		stripe.Parent = folder
 	end
+
+	-- THE QUAD ENVIRONMENT — three brick buildings wrapping the campus --
+
+	-- helper: brick building with rows of windows on the front face
+	local function brickBuilding(name: string, center: Vector3, size: Vector3, frontDir: Vector3,
+		windowRows: number, windowCols: number, accent: Color3?)
+		local body = part({
+			Name = name,
+			Size = size,
+			CFrame = CFrame.new(center),
+			Color = Color3.fromRGB(170, 100, 80),
+			Material = Enum.Material.Brick,
+		})
+		body.Parent = folder
+		-- pitched roof slab
+		local roof = part({
+			Name = name .. "Roof",
+			Size = Vector3.new(size.X + 2, 5, size.Z + 2),
+			CFrame = CFrame.new(center + Vector3.new(0, size.Y / 2 + 2.5, 0)),
+			Color = Color3.fromRGB(60, 45, 35),
+			Material = Enum.Material.Slate,
+		})
+		roof.Parent = folder
+		-- windows on the front face
+		local rightDir = Vector3.new(-frontDir.Z, 0, frontDir.X)
+		local frontFace = center + frontDir * (size.Z / 2 + 0.05)
+		for r = 1, windowRows do
+			for c = 1, windowCols do
+				local rowY = -size.Y / 2 + 6 + (r - 1) * 8
+				local colX = (c - (windowCols + 1) / 2) * (size.X / (windowCols + 1))
+				local wpos = frontFace + Vector3.new(0, rowY, 0) + rightDir * colX
+				local w = part({
+					Name = name .. "Window",
+					Size = Vector3.new(4, 5, 0.4),
+					CFrame = CFrame.lookAt(wpos, wpos + frontDir),
+					Color = accent or Color3.fromRGB(180, 220, 240),
+					Material = Enum.Material.Glass,
+					Transparency = 0.3,
+				})
+				w.Parent = folder
+			end
+		end
+	end
+
+	-- Library on -Z: long brick building with grand entrance pillars
+	brickBuilding(
+		"LibraryHall",
+		world.center + Vector3.new(0, 26, -world.platformRadius - 60),
+		Vector3.new(110, 50, 36),
+		Vector3.new(0, 0, 1),
+		3,
+		7,
+		Color3.fromRGB(180, 220, 240)
+	)
+	-- 4 entrance pillars in front of the library
+	for i = 1, 4 do
+		local x = (i - 2.5) * 8
+		local pillar = part({
+			Name = "LibraryPillar",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(40, 3, 3),
+			CFrame = CFrame.new(world.center + Vector3.new(x, 20, -world.platformRadius - 41))
+				* CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(220, 210, 190),
+			Material = Enum.Material.Marble,
+		})
+		pillar.Parent = folder
+	end
+	-- "LIBRARY" label above entrance
+	local libLabel = part({
+		Name = "LibraryLabel",
+		Size = Vector3.new(40, 6, 1),
+		CFrame = CFrame.new(world.center + Vector3.new(0, 44, -world.platformRadius - 41)),
+		Color = Color3.fromRGB(220, 210, 190),
+		Material = Enum.Material.Marble,
+	})
+	libLabel.Parent = folder
+	billboard(libLabel, "LIBRARY", Color3.fromRGB(245, 200, 80), Vector2.new(28, 4), 0)
+
+	-- Dorm hall on +X side
+	brickBuilding(
+		"DormHall",
+		world.center + Vector3.new(world.platformRadius + 60, 22, -10),
+		Vector3.new(36, 44, 100),
+		Vector3.new(-1, 0, 0),
+		4,
+		8,
+		nil
+	)
+
+	-- Classroom hall on -X side
+	brickBuilding(
+		"ClassroomHall",
+		world.center + Vector3.new(-(world.platformRadius + 60), 18, 0),
+		Vector3.new(36, 36, 90),
+		Vector3.new(1, 0, 0),
+		3,
+		7,
+		nil
+	)
+	-- a clock face on the classroom hall
+	local clockPlate = part({
+		Name = "QuadClockPlate",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.6, 9, 9),
+		CFrame = CFrame.new(world.center + Vector3.new(-(world.platformRadius + 41), 30, 0))
+			* CFrame.Angles(0, 0, 0),
+		Color = Color3.fromRGB(245, 240, 220),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	clockPlate.Parent = folder
+	billboard(clockPlate, "10:10", Color3.fromRGB(40, 30, 20), Vector2.new(7, 3.5), 0)
 end
 
 local function buildFratHouse(folder: Folder, world: Worlds.World)
@@ -1362,6 +1568,108 @@ local function buildFratHouse(folder: Folder, world: Worlds.World)
 		{ CFrame = CFrame.new(ballPos) * CFrame.Angles(0, math.pi * 2, 0) }
 	)
 	discoTween:Play()
+
+	-- FRAT HOUSE ENVIRONMENT — full house facade behind, side neighbors, perimeter trees --
+
+	-- Main frat house facade behind the platform
+	local frHouse = world.center + Vector3.new(0, 0, -world.platformRadius - 65)
+	local frBody = part({
+		Name = "FratFacadeBody",
+		Size = Vector3.new(110, 50, 50),
+		CFrame = CFrame.new(frHouse + Vector3.new(0, 25, 0)),
+		Color = Color3.fromRGB(220, 210, 190),
+		Material = Enum.Material.Plaster,
+	})
+	frBody.Parent = folder
+	-- triangular pediment (just a slab approximation)
+	local pediment = part({
+		Name = "FratPediment",
+		Size = Vector3.new(120, 18, 6),
+		CFrame = CFrame.new(frHouse + Vector3.new(0, 60, 25)),
+		Color = Color3.fromRGB(220, 210, 190),
+		Material = Enum.Material.Plaster,
+	})
+	pediment.Parent = folder
+	-- big roof slab
+	local frRoof = part({
+		Name = "FratRoof",
+		Size = Vector3.new(120, 8, 56),
+		CFrame = CFrame.new(frHouse + Vector3.new(0, 53, 0)),
+		Color = Color3.fromRGB(80, 50, 40),
+		Material = Enum.Material.Slate,
+	})
+	frRoof.Parent = folder
+	-- giant Greek letter sign on the pediment
+	local letterPlate = part({
+		Name = "FratLetterPlate",
+		Size = Vector3.new(40, 12, 0.8),
+		CFrame = CFrame.new(frHouse + Vector3.new(0, 60, 28)),
+		Color = Color3.fromRGB(40, 25, 20),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	letterPlate.Parent = folder
+	billboard(letterPlate, "ΣΑΘ", Color3.fromRGB(255, 80, 80), Vector2.new(28, 9), 0)
+	-- 6 entrance pillars (porch columns)
+	for i = 1, 6 do
+		local x = (i - 3.5) * 16
+		local pillar = part({
+			Name = "FratPorchColumn",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(40, 4, 4),
+			CFrame = CFrame.new(frHouse + Vector3.new(x, 20, 28))
+				* CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(245, 245, 240),
+			Material = Enum.Material.Marble,
+		})
+		pillar.Parent = folder
+	end
+	-- big front door
+	local frDoor = part({
+		Name = "FratDoor",
+		Size = Vector3.new(10, 18, 0.8),
+		CFrame = CFrame.new(frHouse + Vector3.new(0, 9, 26.5)),
+		Color = Color3.fromRGB(80, 50, 30),
+		Material = Enum.Material.Wood,
+	})
+	frDoor.Parent = folder
+	-- windows
+	for _, dx in { -36, -18, 18, 36 } do
+		for _, dy in { 14, 32 } do
+			local w = part({
+				Name = "FratWindow",
+				Size = Vector3.new(10, 8, 0.5),
+				CFrame = CFrame.new(frHouse + Vector3.new(dx, dy, 26.2)),
+				Color = Color3.fromRGB(180, 220, 240),
+				Material = Enum.Material.Glass,
+				Transparency = 0.3,
+			})
+			w.Parent = folder
+		end
+	end
+
+	-- Trees scattered around the perimeter outside the platform
+	for _, ang in { math.rad(45), math.rad(135), math.rad(225), math.rad(315), math.rad(0), math.rad(180) } do
+		local r = world.platformRadius + 28
+		local pos = world.center + Vector3.new(math.cos(ang) * r, 0, math.sin(ang) * r)
+		local trunk = part({
+			Name = "FratTreeTrunk",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(12, 1.6, 1.6),
+			CFrame = CFrame.new(pos + Vector3.new(0, 6, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(90, 60, 40),
+			Material = Enum.Material.Wood,
+		})
+		trunk.Parent = folder
+		local canopy = part({
+			Name = "FratTreeCanopy",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(12, 12, 12),
+			CFrame = CFrame.new(pos + Vector3.new(0, 14, 0)),
+			Color = Color3.fromRGB(60, 110, 50),
+			Material = Enum.Material.Grass,
+		})
+		canopy.Parent = folder
+	end
 end
 
 local function buildStadium(folder: Folder, world: Worlds.World)
@@ -1572,6 +1880,85 @@ local function buildStadium(folder: Folder, world: Worlds.World)
 			CanCollide = false,
 		})
 		fabric.Parent = folder
+	end
+
+	-- STADIUM ENVIRONMENT — full bleacher bowl wrapping the perimeter --
+
+	-- 5-tier bleacher bowl all the way around (each tier higher and farther out)
+	for tier = 1, 5 do
+		local r = world.platformRadius + 30 + tier * 8
+		local h = 6 + tier * 5
+		wallRing(folder, {
+			center = world.center,
+			radius = r,
+			height = h,
+			thickness = 8,
+			segmentCount = 48,
+			color = (tier % 2 == 0) and Color3.fromRGB(60, 70, 95) or Color3.fromRGB(75, 85, 110),
+			material = Enum.Material.Concrete,
+		})
+	end
+
+	-- Press box behind the scoreboard side
+	local pressBox = part({
+		Name = "StadiumPressBox",
+		Size = Vector3.new(80, 20, 16),
+		CFrame = CFrame.new(world.center + Vector3.new(0, 60, -world.platformRadius - 78)),
+		Color = Color3.fromRGB(40, 50, 80),
+		Material = Enum.Material.Concrete,
+	})
+	pressBox.Parent = folder
+	-- press box windows (long horizontal glass strip)
+	local pbWindow = part({
+		Name = "StadiumPressBoxGlass",
+		Size = Vector3.new(74, 8, 0.6),
+		CFrame = CFrame.new(world.center + Vector3.new(0, 60, -world.platformRadius - 70)),
+		Color = Color3.fromRGB(180, 220, 240),
+		Material = Enum.Material.Glass,
+		Transparency = 0.25,
+	})
+	pbWindow.Parent = folder
+
+	-- Player tunnel entrance opposite the press box
+	local tunnelMouth = part({
+		Name = "StadiumTunnel",
+		Size = Vector3.new(20, 16, 32),
+		CFrame = CFrame.new(world.center + Vector3.new(0, 8, world.platformRadius + 36)),
+		Color = Color3.fromRGB(40, 40, 50),
+		Material = Enum.Material.Concrete,
+	})
+	tunnelMouth.Parent = folder
+	-- tunnel sign
+	local tunnelSign = part({
+		Name = "StadiumTunnelSign",
+		Size = Vector3.new(20, 4, 0.8),
+		CFrame = CFrame.new(world.center + Vector3.new(0, 18, world.platformRadius + 20)),
+		Color = Color3.fromRGB(20, 20, 30),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	tunnelSign.Parent = folder
+	billboard(tunnelSign, "PLAYER ENTRANCE", Color3.fromRGB(245, 200, 80), Vector2.new(16, 2.5), 0)
+
+	-- Two giant team flags on poles outside the tunnel
+	for _, sx in { -1, 1 } do
+		local poleBase = world.center + Vector3.new(sx * 16, 0, world.platformRadius + 32)
+		local pole = part({
+			Name = "StadiumBigPole",
+			Size = Vector3.new(0.8, 60, 0.8),
+			CFrame = CFrame.new(poleBase + Vector3.new(0, 30, 0)),
+			Color = Color3.fromRGB(180, 180, 200),
+			Material = Enum.Material.Metal,
+		})
+		pole.Parent = folder
+		local flag = part({
+			Name = "StadiumBigFlag",
+			Size = Vector3.new(0.4, 16, 24),
+			CFrame = CFrame.new(poleBase + Vector3.new(sx * 12, 50, 0)),
+			Color = (sx > 0) and Color3.fromRGB(50, 90, 200) or Color3.fromRGB(220, 50, 50),
+			Material = Enum.Material.Fabric,
+			CanCollide = false,
+		})
+		flag.Parent = folder
 	end
 end
 
@@ -1826,6 +2213,94 @@ local function buildOlympus(folder: Folder, world: Worlds.World)
 	boltGlow.Brightness = 4
 	boltGlow.Range = 30
 	boltGlow.Parent = bolt
+
+	-- OLYMPUS ENVIRONMENT — floating temples + cloud field + mountain silhouette --
+
+	-- 4 small floating Greek temples around the perimeter
+	for i = 1, 4 do
+		local ang = (i - 1) * math.pi / 2 + math.pi / 4
+		local r = world.platformRadius + 50
+		local h = 30 + (i % 2) * 12
+		local templeCenter = world.center + Vector3.new(math.cos(ang) * r, h, math.sin(ang) * r)
+		-- cloud island base under temple
+		local cloud = part({
+			Name = "TempleCloud",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(40, 12, 40),
+			CFrame = CFrame.new(templeCenter + Vector3.new(0, -6, 0)),
+			Color = Color3.fromRGB(255, 255, 255),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		cloud.Transparency = 0.15
+		cloud.Parent = folder
+		-- temple floor
+		local floor_ = part({
+			Name = "TempleFloor",
+			Size = Vector3.new(28, 1.5, 24),
+			CFrame = CFrame.new(templeCenter),
+			Color = Color3.fromRGB(245, 245, 250),
+			Material = Enum.Material.Marble,
+		})
+		floor_.Parent = folder
+		-- 6 columns
+		for j = 1, 6 do
+			local cx = (j <= 3) and ((j - 2) * 10) or ((j - 5) * 10)
+			local cz = (j <= 3) and -10 or 10
+			local col = part({
+				Name = "TempleColumn",
+				Shape = Enum.PartType.Cylinder,
+				Size = Vector3.new(16, 1.6, 1.6),
+				CFrame = CFrame.new(templeCenter + Vector3.new(cx, 8, cz)) * CFrame.Angles(0, 0, math.rad(90)),
+				Color = Color3.fromRGB(245, 245, 250),
+				Material = Enum.Material.Marble,
+			})
+			col.Parent = folder
+		end
+		-- pediment roof
+		local roof = part({
+			Name = "TempleRoof",
+			Size = Vector3.new(30, 4, 26),
+			CFrame = CFrame.new(templeCenter + Vector3.new(0, 17, 0)),
+			Color = Color3.fromRGB(245, 200, 80),
+			Material = Enum.Material.Foil,
+		})
+		roof.Parent = folder
+	end
+
+	-- Big cloud field — many low transparency white sphere parts above and around
+	for _ = 1, 25 do
+		local ang = math.random() * math.pi * 2
+		local r = world.platformRadius + math.random(40, 130)
+		local h = math.random(10, 80)
+		local pos = world.center + Vector3.new(math.cos(ang) * r, h, math.sin(ang) * r)
+		local cloud = part({
+			Name = "OlympusCloud",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(math.random(14, 26), math.random(8, 14), math.random(14, 26)),
+			CFrame = CFrame.new(pos),
+			Color = Color3.fromRGB(255, 255, 255),
+			Material = Enum.Material.SmoothPlastic,
+			CanCollide = false,
+		})
+		cloud.Transparency = 0.18
+		cloud.Parent = folder
+	end
+
+	-- Distant mountain silhouette behind the platform
+	local mountainPos = world.center + Vector3.new(0, 0, -world.platformRadius - 120)
+	for i = 1, 5 do
+		local h = 60 + (i - 3) * 20
+		local sx = (i - 3) * 35
+		local mtn = part({
+			Name = "OlympusMountain",
+			Shape = Enum.PartType.Block,
+			Size = Vector3.new(60, h, 60),
+			CFrame = CFrame.new(mountainPos + Vector3.new(sx, h / 2, 0)) * CFrame.Angles(0, math.rad(45), 0),
+			Color = Color3.fromRGB(180, 180, 220),
+			Material = Enum.Material.Slate,
+		})
+		mtn.Parent = folder
+	end
 end
 
 local themeBuilders: { [string]: (Folder, Worlds.World) -> () } = {
