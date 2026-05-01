@@ -52,7 +52,9 @@ function Practice.startSession(player: Player, world: World)
 		print("[Sacktopia] startSession rejected: already in a session")
 		return -- already in a session
 	end
-	-- mark them alive in their personal practice "match" so SackController targets them
+
+	-- Build everything inside a pcall so a constructor error doesn't leave a ghost
+	-- session entry that locks out future attempts.
 	PlayerState.setAlive(player, true)
 	local session: Session = {
 		player = player,
@@ -60,24 +62,36 @@ function Practice.startSession(player: Player, world: World)
 		sack = nil,
 		stats = { deflects = 0, drops = 0, currentCombo = 0, maxCombo = 0 },
 	}
-	sessions[player] = session
-	local sack = SackController.new(world, { player })
-	sack:setPracticeMode(true)
-	sack:setOnDeflect(function(_p: Player, combo: number)
-		session.stats.deflects += 1
-		session.stats.currentCombo = combo
-		if combo > session.stats.maxCombo then
-			session.stats.maxCombo = combo
+	local builtSack
+	local ok, err = pcall(function()
+		builtSack = SackController.new(world, { player })
+		builtSack:setPracticeMode(true)
+		builtSack:setOnDeflect(function(_p: Player, combo: number)
+			session.stats.deflects += 1
+			session.stats.currentCombo = combo
+			if combo > session.stats.maxCombo then
+				session.stats.maxCombo = combo
+			end
+			fireStats(session, true)
+		end)
+		builtSack:setOnDrop(function(_p: Player?, _reason: string)
+			session.stats.drops += 1
+			session.stats.currentCombo = 0
+			fireStats(session, true)
+		end)
+		builtSack:start()
+	end)
+	if not ok then
+		warn("[Sacktopia] startSession FAILED: " .. tostring(err))
+		PlayerState.setAlive(player, false)
+		if builtSack and builtSack.destroy then
+			pcall(function() builtSack:destroy() end)
 		end
-		fireStats(session, true)
-	end)
-	sack:setOnDrop(function(_p: Player?, _reason: string)
-		session.stats.drops += 1
-		session.stats.currentCombo = 0
-		fireStats(session, true)
-	end)
-	sack:start()
-	session.sack = sack
+		return
+	end
+	-- only register the session AFTER the sack is up — so failures don't leave a stale entry
+	session.sack = builtSack
+	sessions[player] = session
 	fireStats(session, true)
 	print(string.format("[Sacktopia] startSession SUCCESS for %s", player.Name))
 end

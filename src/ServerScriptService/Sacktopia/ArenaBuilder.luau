@@ -350,14 +350,14 @@ local function buildPortal(parent: Folder, world: Worlds.World, angle: number)
 	local inward = Vector3.new(-math.cos(angle), 0, -math.sin(angle))
 	local portalCFrame = CFrame.lookAt(portalCenter, portalCenter + inward)
 
-	-- energy plane — players walk through this to enter
+	-- energy plane — players walk through this to enter (Neon = solid bright, not see-through)
 	local energy = part({
 		Name = "Portal_" .. world.id,
 		Size = Vector3.new(doorWidth, doorHeight, energyThickness),
 		CFrame = portalCFrame,
 		Color = world.platformColor,
-		Material = Enum.Material.ForceField,
-		Transparency = 0.35,
+		Material = Enum.Material.Neon,
+		Transparency = 0.05,
 		CanCollide = false,
 	})
 	energy.Parent = parent
@@ -438,7 +438,7 @@ local function buildPortal(parent: Folder, world: Worlds.World, angle: number)
 
 	-- subtle pulsing of the energy plane (Sine ease, looped, reverse on each cycle)
 	local pulseInfo = TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
-	TweenService:Create(energy, pulseInfo, { Transparency = 0.55 }):Play()
+	TweenService:Create(energy, pulseInfo, { Transparency = 0.2 }):Play()
 
 	-- swirling particles inside the doorway, attached to the energy plane
 	local emitterAttach = Instance.new("Attachment")
