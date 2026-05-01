@@ -113,6 +113,7 @@ function SackController.new(arena: World, roster: { Player })
 	self._onDrop = nil :: ((player: Player?, reason: string) -> ())?
 	self._resetting = false -- true while sack is between plays (post-elimination respawn)
 	self.practiceMode = false -- if true, _eliminate doesn't kill players
+	self.landingZoneRadius = Config.Combat.LandingZoneRadius -- shrinks with combo in practice
 	applySkin(self.part, self._activeSkin)
 	self.part.Position = self.position
 	self.part.Parent = Workspace
@@ -200,6 +201,21 @@ function SackController:_pickInitialTarget()
 end
 
 function SackController:start()
+	-- Practice mode: spawn the sack directly above the practice player and just let it
+	-- fall straight down — pure vertical from the start.
+	if self.practiceMode and self.roster[1] then
+		local p = self.roster[1]
+		local root = characterRoot(p)
+		if root then
+			self.position = Vector3.new(root.Position.X, root.Position.Y + self.arena.sackSpawnHeight, root.Position.Z)
+			self.part.Position = self.position
+		end
+		self.velocity = Vector3.new(0, 0, 0) -- gravity will start pulling it down
+		self._heartbeatConn = RunService.Heartbeat:Connect(function(dt)
+			self:_step(dt)
+		end)
+		return
+	end
 	-- Seed: launch toward a random alive player from above center.
 	local target = self:_pickInitialTarget()
 	if target and target.Character and target.Character.PrimaryPart then
@@ -269,8 +285,35 @@ function SackController:_predictImpact(player: Player): number?
 	return along
 end
 
+-- Predict where the sack will land on the arena floor under current velocity + gravity.
+-- Returns Vector3 of the predicted landing point, or nil if the sack is moving up
+-- forever (won't happen with positive gravity).
+function SackController:_predictLanding(): Vector3?
+	local center = self.arena.center
+	local groundY = center.Y + Config.ArenaDefaults.PlatformThickness / 2 + Config.Sack.Radius
+	local g = Config.Sack.Gravity
+	local s = self.position
+	local v = self.velocity
+	-- Solve s.y + v.y*t - 0.5*g*t² = groundY for t > 0
+	-- => 0.5*g*t² - v.y*t + (groundY - s.y) = 0
+	-- discriminant: v.y² + 2*g*(s.y - groundY)
+	local disc = v.Y * v.Y + 2 * g * (s.Y - groundY)
+	if disc < 0 then
+		return nil -- already past ground level somehow
+	end
+	local t = (v.Y + math.sqrt(disc)) / g
+	if t <= 0 then
+		return nil
+	end
+	local landX = s.X + v.X * t
+	local landZ = s.Z + v.Z * t
+	return Vector3.new(landX, groundY, landZ)
+end
+
 function SackController:_chooseTarget()
-	-- Pick the closest alive player to the sack; distance-based is robust to gravity arcs.
+	-- Pick the alive player closest to where the sack will land, not closest to the sack.
+	-- Players run TO the landing zone to claim the deflect.
+	local landing = self:_predictLanding()
 	local best: Player? = nil
 	local bestDist = math.huge
 	for _, p in self:_aliveRoster() do
@@ -278,7 +321,13 @@ function SackController:_chooseTarget()
 		if not root then
 			continue
 		end
-		local d = (root.Position - self.position).Magnitude
+		local d
+		if landing then
+			-- horizontal-only distance to landing point (ignore Y)
+			d = Vector3.new(root.Position.X - landing.X, 0, root.Position.Z - landing.Z).Magnitude
+		else
+			d = (root.Position - self.position).Magnitude
+		end
 		if d < bestDist then
 			best = p
 			bestDist = d
@@ -302,26 +351,34 @@ function SackController:_maybeOpenWindow()
 	if not root then
 		return
 	end
-	local toTarget = root.Position - self.position
-	local dist = toTarget.Magnitude
-	-- close window only when sack is clearly out of deflect range
-	if dist > Config.Combat.WindowOpenDistance then
+	-- Window is open when the target is in the predicted landing zone.
+	local landing = self:_predictLanding()
+	local horizDist
+	if landing then
+		horizDist = Vector3.new(root.Position.X - landing.X, 0, root.Position.Z - landing.Z).Magnitude
+	else
+		horizDist = (root.Position - self.position).Magnitude
+	end
+
+	if horizDist > self.landingZoneRadius then
 		if self.windowOpenFor == target then
-			Remotes.WindowClosed:FireClient(target, self.id, "outofrange")
+			Remotes.WindowClosed:FireClient(target, self.id, "outofzone")
 			self.windowOpenFor = nil
 		end
 		return
 	end
-	if dist <= Config.Sack.HitRadius then
-		return -- _checkHit will fire — let it handle elimination, not us
+	-- Sack already at ground / hitting target — let _checkHit handle it.
+	if (root.Position - self.position).Magnitude <= Config.Sack.HitRadius then
+		return
 	end
 	if self.windowOpenFor ~= target then
 		self.windowOpenFor = target
-		-- estimate impact time so the timing-ring UI has something to count down against
-		local eta = dist / math.max(self.velocity.Magnitude, 1)
+		-- ETA so the timing-ring UI has something to drain
+		local v = self.velocity.Magnitude
+		local eta = (root.Position - self.position).Magnitude / math.max(v, 1)
 		self.predictedImpactAt = workspace:GetServerTimeNow() + eta
 		Remotes.WindowOpened:FireClient(target, self.id, self.predictedImpactAt)
-		print(string.format("[Sacktopia] window OPEN for %s (dist=%.1f, eta=%.2fs)", target.Name, dist, eta))
+		print(string.format("[Sacktopia] window OPEN for %s (zoneDist=%.1f, eta=%.2fs)", target.Name, horizDist, eta))
 	end
 end
 
@@ -364,11 +421,23 @@ function SackController:_eliminate(player: Player?, reason: string)
 		end
 	end
 
-	-- reset sack: lift back to spawn height, clear combo
+	-- reset sack: lift back to spawn height, clear combo, reset landing zone for next play
 	self.target = nil
 	self.lastDeflector = nil
 	self.consecutiveByLast = 0
-	self.position = self.arena.center + Vector3.new(0, self.arena.sackSpawnHeight, 0)
+	self.landingZoneRadius = Config.Combat.LandingZoneRadius
+	-- in practice mode the sack reappears above the player (not arena center)
+	if self.practiceMode and self.roster[1] then
+		local p = self.roster[1]
+		local root = characterRoot(p)
+		if root then
+			self.position = Vector3.new(root.Position.X, root.Position.Y + self.arena.sackSpawnHeight, root.Position.Z)
+		else
+			self.position = self.arena.center + Vector3.new(0, self.arena.sackSpawnHeight, 0)
+		end
+	else
+		self.position = self.arena.center + Vector3.new(0, self.arena.sackSpawnHeight, 0)
+	end
 	self.velocity = Vector3.new(0, 0, 0)
 	self.speed = Config.Sack.BaseSpeed
 	self.part.Position = self.position
@@ -377,12 +446,17 @@ function SackController:_eliminate(player: Player?, reason: string)
 		if not self.alive then
 			return
 		end
-		local nextTarget = self:_pickInitialTarget()
-		if nextTarget and nextTarget.Character and nextTarget.Character.PrimaryPart then
-			local dir = (nextTarget.Character.PrimaryPart.Position - self.position).Unit
-			self.velocity = (dir + Vector3.new(0, 0.4, 0)).Unit * self.speed
+		if self.practiceMode then
+			-- practice: sack is already above the player, just let gravity do its thing
+			self.velocity = Vector3.new(0, 0, 0)
 		else
-			self.velocity = Vector3.new(0, -1, 0) * self.speed
+			local nextTarget = self:_pickInitialTarget()
+			if nextTarget and nextTarget.Character and nextTarget.Character.PrimaryPart then
+				local dir = (nextTarget.Character.PrimaryPart.Position - self.position).Unit
+				self.velocity = (dir + Vector3.new(0, 0.4, 0)).Unit * self.speed
+			else
+				self.velocity = Vector3.new(0, -1, 0) * self.speed
+			end
 		end
 		self._resetting = false
 	end)
@@ -436,11 +510,15 @@ function SackController:_broadcastSnapshot()
 		return
 	end
 	self._lastSnapshot = now
+	local landing = (not self._resetting) and self:_predictLanding() or nil
 	Remotes.SackState:FireAllClients({
 		id = self.id,
 		holder = self.lastDeflector and self.lastDeflector.UserId or 0,
 		combo = self.consecutiveByLast,
 		speed = self.velocity.Magnitude,
+		landing = landing,
+		zoneRadius = self.landingZoneRadius or Config.Combat.LandingZoneRadius,
+		practice = self.practiceMode == true,
 	})
 end
 
@@ -460,6 +538,17 @@ function SackController:_step(dt: number)
 	v = v * (1 - Config.Sack.Drag * dt)
 	self.velocity = v
 	self.position = self.position + v * dt
+	-- In practice mode the sack tracks the player horizontally so it always falls toward
+	-- them — pure vertical play. Deflects also become pure vertical (see onDeflectAttempt).
+	if self.practiceMode and self.roster[1] then
+		local p = self.roster[1]
+		local root = characterRoot(p)
+		if root then
+			self.position = Vector3.new(root.Position.X, self.position.Y, root.Position.Z)
+			-- kill any horizontal drift from drag/integration
+			self.velocity = Vector3.new(0, self.velocity.Y, 0)
+		end
+	end
 	self:_clampInBounds()
 	self.part.Position = self.position
 
@@ -488,8 +577,15 @@ function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, 
 		self.consecutiveByLast = 1
 	end
 
-	-- speed scales until combo cap; past the cap, the player gets no more bonus (juggle-to-self loses value)
-	local effectiveDeflects = math.min(self.consecutiveByLast, Config.Combat.MaxComboPerPlayer)
+	-- Speed scaling. In matches the combo cap stops the bonus past MaxComboPerPlayer so
+	-- self-juggling loses value; in practice we let it scale uncapped so the timing gets
+	-- meaningfully harder the longer your combo lasts.
+	local effectiveDeflects
+	if self.practiceMode then
+		effectiveDeflects = self.consecutiveByLast
+	else
+		effectiveDeflects = math.min(self.consecutiveByLast, Config.Combat.MaxComboPerPlayer)
+	end
 	local newSpeed = math.min(
 		Config.Sack.BaseSpeed + Config.Sack.SpeedPerDeflect * (effectiveDeflects - 1) * 1.0
 			+ Config.Sack.SpeedPerDeflect * 1.5,
@@ -497,9 +593,27 @@ function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, 
 	)
 	self.speed = newSpeed
 
+	-- In practice mode, every deflect is pure vertical so the sack stays above the player.
+	-- We also shrink the landing zone with each combo for difficulty.
+	if self.practiceMode then
+		self.velocity = Vector3.new(0, newSpeed, 0)
+		local minRadius = Config.Sack.HitRadius + 1.5
+		self.landingZoneRadius = math.max(
+			minRadius,
+			Config.Combat.LandingZoneRadius - (self.consecutiveByLast - 1) * 0.6
+		)
+		self.target = nil
+		self:_setHolderSkin(player)
+		Remotes.KickFX:FireAllClients(player, Vector3.new(0, 1, 0))
+		if self._onDeflect then
+			self._onDeflect(player, self.consecutiveByLast)
+		end
+		self:_broadcastSnapshot()
+		return true
+	end
+
 	-- Cursor-aim: if the client identified a target player, aim at them. Otherwise fall
-	-- back to the camera lookVector — except in practice with no cursor target, where we
-	-- default to "mostly up" so the player can self-juggle by spamming SPACE.
+	-- back to the camera lookVector.
 	local dir: Vector3? = nil
 	if targetUserId and targetUserId > 0 then
 		local targetPlayer = Players:GetPlayerByUserId(targetUserId)
@@ -511,11 +625,7 @@ function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, 
 		end
 	end
 	if not dir then
-		if self.practiceMode then
-			-- juggle-friendly: sack goes mostly straight up so it lands back on the practice player
-			local lateral = Vector3.new(aimDirection.X, 0, aimDirection.Z) * 0.15
-			dir = (Vector3.new(0, 1, 0) + lateral).Unit
-		elseif aimDirection.Magnitude < 0.01 then
+		if aimDirection.Magnitude < 0.01 then
 			dir = Vector3.new(0, 1, 0)
 		else
 			dir = aimDirection.Unit

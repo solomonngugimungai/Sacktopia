@@ -343,6 +343,11 @@ function Lobby.start()
 					hum.JumpHeight = 0
 				end
 			end)
+			-- a respawn means whatever the player was doing is over — clear any stale practice
+			-- session so the HUD doesn't keep ticking drops in the background
+			if Practice.isInSession(player) then
+				Practice.endSession(player)
+			end
 			-- if not in a match, send to lobby (defense in depth — RespawnLocation should already do this)
 			if not isInAnyMatch(player) then
 				task.wait(0.1)

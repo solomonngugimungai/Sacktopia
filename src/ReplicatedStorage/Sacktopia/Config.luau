@@ -21,10 +21,13 @@ Config.Sack = {
 }
 
 Config.Combat = {
-	-- DISTANCE-BASED deflect window (Blade Ball style). The window is open whenever the
-	-- sack is within WindowOpenDistance studs of the targeted player. SPACE / M1 / R2
-	-- registers as a deflect anywhere in that window. No "approaching" requirement —
-	-- you can hit the sack even as it's leaving you.
+	-- LANDING-ZONE-BASED deflect (sports / Pokken style). The server predicts where the
+	-- sack will land; any alive player whose character is within LandingZoneRadius studs
+	-- of that landing point can press SPACE to deflect. Clients render a disc at the
+	-- landing point so you know where to be.
+	LandingZoneRadius = 8,
+	-- WindowOpenDistance is the fallback proximity in case landing prediction fails
+	-- (e.g. zero velocity). Stays open while sack is within this distance of target.
 	WindowOpenDistance = 24,
 	-- legacy lead times — kept for the timing-ring UI animation only
 	WindowOpenLead = 0.45,

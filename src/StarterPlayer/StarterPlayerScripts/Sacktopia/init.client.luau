@@ -12,6 +12,7 @@ local LobbyHUD = require(script:WaitForChild("LobbyHUD"))
 local MatchSummary = require(script:WaitForChild("MatchSummary"))
 local DropAlerts = require(script:WaitForChild("DropAlerts"))
 local PracticeHUD = require(script:WaitForChild("PracticeHUD"))
+local LandingZone = require(script:WaitForChild("LandingZone"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -107,4 +108,5 @@ LobbyHUD.start()
 MatchSummary.start()
 DropAlerts.start()
 PracticeHUD.start()
+LandingZone.start()
 print("[Sacktopia] client boot")
