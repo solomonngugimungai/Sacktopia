@@ -84,6 +84,14 @@ local function applySkin(part: BasePart, skin: Items.SackSkin)
 	part.Transparency = skin.transparency
 end
 
+local function characterRoot(player: Player): BasePart?
+	local char = player.Character
+	if not char then
+		return nil
+	end
+	return char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") :: BasePart?
+end
+
 function SackController.new(arena: World, roster: { Player })
 	local self = setmetatable({}, SackController)
 	self.id = (function()
@@ -232,14 +240,6 @@ function SackController:start()
 	self._heartbeatConn = RunService.Heartbeat:Connect(function(dt)
 		self:_step(dt)
 	end)
-end
-
-local function characterRoot(player: Player): BasePart?
-	local char = player.Character
-	if not char then
-		return nil
-	end
-	return char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
 function SackController:_clampInBounds()
