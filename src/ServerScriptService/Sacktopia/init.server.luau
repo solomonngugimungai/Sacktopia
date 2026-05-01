@@ -1,10 +1,12 @@
 local PlayerStats = require(script:WaitForChild("PlayerStats"))
 local Inventory = require(script:WaitForChild("Inventory"))
 local EquipController = require(script:WaitForChild("EquipController"))
+local Practice = require(script:WaitForChild("Practice"))
 local Lobby = require(script:WaitForChild("Lobby"))
 
 print("[Sacktopia] server boot")
 PlayerStats.start()
 Inventory.start()
 EquipController.start()
+Practice.start()
 Lobby.start()

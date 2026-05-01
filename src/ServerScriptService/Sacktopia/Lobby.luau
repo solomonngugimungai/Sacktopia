@@ -19,6 +19,7 @@ local Remotes = require(ReplicatedStorage.Sacktopia:WaitForChild("Remotes"))
 local Worlds = require(ReplicatedStorage.Sacktopia:WaitForChild("Worlds"))
 local ArenaBuilder = require(script.Parent:WaitForChild("ArenaBuilder"))
 local MatchController = require(script.Parent:WaitForChild("MatchController"))
+local Practice = require(script.Parent:WaitForChild("Practice"))
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerStats = require(script.Parent:WaitForChild("PlayerStats"))
 
@@ -39,6 +40,10 @@ local function updateQueueBoard(worldId: string)
 	local label = ArenaBuilder.getQueueBoardLabel(worldId)
 	if not label then
 		return
+	end
+	local world = Worlds.byId(worldId)
+	if world and world.isPractice then
+		return -- practice arena keeps its static "SOLO TRAINING" text
 	end
 	local q = queues[worldId]
 	if not q then
@@ -245,7 +250,7 @@ end
 
 local function bindPortalTouch(portal: ArenaBuilder.Portal)
 	-- Portals NO LONGER auto-queue. They just teleport you to that world's staging area.
-	-- Queueing is opt-in via the green QUEUE pad inside the world.
+	-- Queueing is opt-in via the green QUEUE pad inside the world (or yellow PRACTICE pad).
 	portal.part.Touched:Connect(function(hit: BasePart)
 		local player = resolveTouchedPlayer(hit, 1.0)
 		if not player then
@@ -258,7 +263,7 @@ local function bindPortalTouch(portal: ArenaBuilder.Portal)
 		if not Worlds.canEnter(portal.world, stats.tierId) then
 			return -- gated; LobbyHUD shows the lock
 		end
-		if isInAnyMatch(player) then
+		if isInAnyMatch(player) or Practice.isInSession(player) then
 			return
 		end
 		teleportToWorldStaging(player, portal.world.id)
@@ -266,12 +271,18 @@ local function bindPortalTouch(portal: ArenaBuilder.Portal)
 end
 
 local function bindQueuePadTouch(worldId: string, pad: BasePart)
+	local world = Worlds.byId(worldId)
 	pad.Touched:Connect(function(hit: BasePart)
 		local player = resolveTouchedPlayer(hit, 0.4)
 		if not player then
 			return
 		end
-		joinQueue(player, worldId)
+		if world and world.isPractice then
+			-- yellow START PRACTICE pad: spin up a personal sack for this player
+			Practice.startSession(player, world)
+		else
+			joinQueue(player, worldId)
+		end
 	end)
 end
 
@@ -283,6 +294,10 @@ local function bindReturnPadTouch(worldId: string, pad: BasePart)
 		end
 		if isInAnyMatch(player) then
 			return -- can't bail mid-match via the pad; fall off or die
+		end
+		-- end any practice session before teleporting out
+		if Practice.isInSession(player) then
+			Practice.endSession(player)
 		end
 		removeFromAllQueues(player)
 		teleportToLobby(player)
@@ -341,14 +356,23 @@ function Lobby.start()
 		touchDebounce[p] = nil
 	end)
 
-	-- deflect remote → forward to whichever match the player is in
-	Remotes.DeflectAttempt.OnServerEvent:Connect(function(player: Player, aimDirection, clientTime)
+	-- deflect remote → forward to whichever match (or practice session) the player is in
+	Remotes.DeflectAttempt.OnServerEvent:Connect(function(player: Player, aimDirection, clientTime, targetUserId)
 		if typeof(aimDirection) ~= "Vector3" or typeof(clientTime) ~= "number" then
+			return
+		end
+		local tUid: number? = nil
+		if typeof(targetUserId) == "number" and targetUserId > 0 then
+			tUid = targetUserId
+		end
+		-- practice takes priority (a player can't be in both a match and practice)
+		if Practice.isInSession(player) then
+			Practice.handleDeflect(player, aimDirection, clientTime, tUid)
 			return
 		end
 		for _, match in activeMatches do
 			if match:isPlayerInMatch(player) and match.sack then
-				match.sack:onDeflectAttempt(player, aimDirection, clientTime)
+				match.sack:onDeflectAttempt(player, aimDirection, clientTime, tUid)
 				return
 			end
 		end

@@ -58,6 +58,8 @@ local Remotes = {
 	-- server → all clients: a player let the sack drop / got hit. Payload: {userId, displayName, reason}
 	-- where reason is "ground" (sack landed) or "missed" (direct sack-to-player hit)
 	DropAlert = getOrCreate(root, "RemoteEvent", "DropAlert") :: RemoteEvent,
+	-- server → owning client: practice mode stats snapshot {deflects, drops, currentCombo, maxCombo, sessionActive}
+	PracticeStats = getOrCreate(root, "RemoteEvent", "PracticeStats") :: RemoteEvent,
 }
 
 return Remotes

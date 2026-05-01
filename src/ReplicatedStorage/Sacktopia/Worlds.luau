@@ -17,6 +17,7 @@ export type World = {
 	platformRadius: number,
 	platformColor: Color3,
 	platformMaterial: Enum.Material,
+	isPractice: boolean?, -- true = solo no-elimination training mode
 }
 
 local function world(t: { [string]: any }): World
@@ -75,6 +76,17 @@ Worlds.List = {
 		center = Vector3.new(0, 0, -300),
 		platformColor = Color3.fromRGB(240, 240, 255),
 		platformMaterial = Enum.Material.Marble,
+	}),
+	world({
+		id = "Practice",
+		name = "Practice",
+		tagline = "No elimination. Just juggle.",
+		requiredTier = "Bronze",
+		center = Vector3.new(0, 0, 600),
+		platformColor = Color3.fromRGB(255, 200, 80),
+		platformMaterial = Enum.Material.SmoothPlastic,
+		platformRadius = 60,
+		isPractice = true,
 	}),
 }
 

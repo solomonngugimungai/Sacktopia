@@ -1308,21 +1308,24 @@ local themeBuilders: { [string]: (Folder, Worlds.World) -> () } = {
 
 local function buildArenaQueueZone(folder: Folder, world: Worlds.World)
 	local platformTopY = world.center.Y + Config.ArenaDefaults.PlatformThickness / 2
-	-- queue pad: green glowing disc, near +Z edge of platform
+	local isPractice = world.isPractice == true
+	local padColor = isPractice and Color3.fromRGB(255, 200, 80) or Color3.fromRGB(80, 220, 120)
+	local padName = isPractice and "PracticeStartPad" or "QueuePad"
+	-- queue/practice pad: glowing disc, near +Z edge of platform
 	local queuePos = Vector3.new(world.center.X, platformTopY + 0.3, world.center.Z + world.platformRadius * 0.55)
 	local queuePad = part({
-		Name = "QueuePad",
+		Name = padName,
 		Shape = Enum.PartType.Cylinder,
 		Size = Vector3.new(0.6, 12, 12),
 		CFrame = CFrame.new(queuePos) * CFrame.Angles(0, 0, math.rad(90)),
-		Color = Color3.fromRGB(80, 220, 120),
+		Color = padColor,
 		Material = Enum.Material.Neon,
 		CanCollide = false,
 		Transparency = 0.15,
 	})
 	queuePad.Parent = folder
 	local qLight = Instance.new("PointLight")
-	qLight.Color = Color3.fromRGB(80, 220, 120)
+	qLight.Color = padColor
 	qLight.Brightness = 2
 	qLight.Range = 16
 	qLight.Parent = queuePad
@@ -1378,7 +1381,7 @@ local function buildArenaQueueZone(folder: Folder, world: Worlds.World)
 	status.TextScaled = true
 	status.TextColor3 = Color3.fromRGB(255, 255, 255)
 	status.TextStrokeTransparency = 0.4
-	status.Text = "0 / 14 in queue\nNeed 2 to start"
+	status.Text = isPractice and "SOLO TRAINING\nNo elimination" or "0 / 14 in queue\nNeed 2 to start"
 	status.Parent = frame
 	-- footer hint
 	local hint = Instance.new("TextLabel")
@@ -1387,9 +1390,9 @@ local function buildArenaQueueZone(folder: Folder, world: Worlds.World)
 	hint.BackgroundTransparency = 1
 	hint.Font = Enum.Font.Gotham
 	hint.TextScaled = true
-	hint.TextColor3 = Color3.fromRGB(160, 200, 160)
+	hint.TextColor3 = isPractice and Color3.fromRGB(255, 220, 160) or Color3.fromRGB(160, 200, 160)
 	hint.TextStrokeTransparency = 0.4
-	hint.Text = "Step on the GREEN pad to queue"
+	hint.Text = isPractice and "Step on the YELLOW pad to start practicing" or "Step on the GREEN pad to queue"
 	hint.Parent = frame
 
 	queueBoardLabels[world.id] = status
@@ -1480,6 +1483,24 @@ local function buildArenas(root: Folder)
 		local builder = themeBuilders[world.id]
 		if builder then
 			builder(arenaFolder, world)
+		end
+		-- invisible safety + isolation barrier so players can't jump out / between arenas
+		local barrierFolder = Instance.new("Folder")
+		barrierFolder.Name = "InvisibleBarrier"
+		barrierFolder.Parent = arenaFolder
+		wallRing(barrierFolder, {
+			center = world.center,
+			radius = world.platformRadius + 1,
+			height = 36,
+			thickness = 1.0,
+			segmentCount = 36,
+			color = Color3.fromRGB(255, 255, 255),
+			material = Enum.Material.ForceField,
+		})
+		for _, child in barrierFolder:GetChildren() do
+			if child:IsA("BasePart") then
+				child.Transparency = 0.92 -- almost invisible, faint sheen so players see the limit
+			end
 		end
 		-- queue zone (queue pad, return pad, board, staging cframe)
 		buildArenaQueueZone(arenaFolder, world)

@@ -109,7 +109,10 @@ function SackController.new(arena: World, roster: { Player })
 	self._cycleT = 0
 	self._activeSkin = Items.getSkin("Classic") :: Items.SackSkin
 	self._onPlayerHit = nil :: ((player: Player) -> ())?
+	self._onDeflect = nil :: ((player: Player, combo: number) -> ())?
+	self._onDrop = nil :: ((player: Player?, reason: string) -> ())?
 	self._resetting = false -- true while sack is between plays (post-elimination respawn)
+	self.practiceMode = false -- if true, _eliminate doesn't kill players
 	applySkin(self.part, self._activeSkin)
 	self.part.Position = self.position
 	self.part.Parent = Workspace
@@ -119,6 +122,18 @@ end
 -- MatchController registers a callback so it can record placement order
 function SackController:setOnPlayerHit(fn: (player: Player) -> ())
 	self._onPlayerHit = fn
+end
+
+function SackController:setPracticeMode(v: boolean)
+	self.practiceMode = v
+end
+
+function SackController:setOnDeflect(fn: (player: Player, combo: number) -> ())
+	self._onDeflect = fn
+end
+
+function SackController:setOnDrop(fn: (player: Player?, reason: string) -> ())
+	self._onDrop = fn
 end
 
 function SackController:_setHolderSkin(player: Player)
@@ -323,23 +338,30 @@ function SackController:_eliminate(player: Player?, reason: string)
 	end
 
 	if player then
-		Remotes.Eliminated:FireClient(player)
-		PlayerState.markOut(player)
-		if self._onPlayerHit then
-			self._onPlayerHit(player)
-		end
-		if player.Character then
-			local hum = player.Character:FindFirstChildOfClass("Humanoid")
-			if hum then
-				hum.Health = 0
+		if self.practiceMode then
+			-- practice: no elimination, no kill, just notify the drop callback so stats can tick
+			if self._onDrop then
+				self._onDrop(player, reason)
 			end
+		else
+			Remotes.Eliminated:FireClient(player)
+			PlayerState.markOut(player)
+			if self._onPlayerHit then
+				self._onPlayerHit(player)
+			end
+			if player.Character then
+				local hum = player.Character:FindFirstChildOfClass("Humanoid")
+				if hum then
+					hum.Health = 0
+				end
+			end
+			-- broadcast a drop alert to all clients so they all see who dropped
+			Remotes.DropAlert:FireAllClients({
+				userId = player.UserId,
+				displayName = player.DisplayName,
+				reason = reason,
+			})
 		end
-		-- broadcast a drop alert to all clients so they all see who dropped
-		Remotes.DropAlert:FireAllClients({
-			userId = player.UserId,
-			displayName = player.DisplayName,
-			reason = reason,
-		})
 	end
 
 	-- reset sack: lift back to spawn height, clear combo
@@ -449,7 +471,7 @@ function SackController:_step(dt: number)
 	self:_broadcastSnapshot()
 end
 
-function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, _clientTime: number)
+function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, _clientTime: number, targetUserId: number?)
 	print(string.format("[Sacktopia] deflect attempt from %s (windowOpenFor=%s, alive=%s)",
 		player.Name, tostring(self.windowOpenFor and self.windowOpenFor.Name or "nil"), tostring(self.alive)))
 	if not self.alive or self.windowOpenFor ~= player then
@@ -475,23 +497,39 @@ function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, 
 	)
 	self.speed = newSpeed
 
-	-- shape aim: ensure some upward component so it arcs
-	local dir = aimDirection
-	if dir.Magnitude < 0.01 then
-		dir = Vector3.new(0, 1, 0)
-	else
-		dir = dir.Unit
+	-- Cursor-aim: if the client identified a target player, aim at them. Otherwise fall
+	-- back to the camera lookVector the client sent.
+	local dir: Vector3? = nil
+	if targetUserId and targetUserId > 0 then
+		local targetPlayer = Players:GetPlayerByUserId(targetUserId)
+		if targetPlayer and targetPlayer ~= player and PlayerState.isAlive(targetPlayer) then
+			local root = characterRoot(targetPlayer)
+			if root then
+				dir = (root.Position - self.position).Unit
+			end
+		end
 	end
-	if dir.Y < Config.Combat.MinUpwardComponent then
-		dir = Vector3.new(dir.X, dir.Y + Config.Combat.AimUpwardBias, dir.Z).Unit
+	if not dir then
+		if aimDirection.Magnitude < 0.01 then
+			dir = Vector3.new(0, 1, 0)
+		else
+			dir = aimDirection.Unit
+		end
 	end
-	self.velocity = dir * newSpeed
+	if (dir :: Vector3).Y < Config.Combat.MinUpwardComponent then
+		dir = Vector3.new((dir :: Vector3).X, (dir :: Vector3).Y + Config.Combat.AimUpwardBias, (dir :: Vector3).Z).Unit
+	end
+	self.velocity = (dir :: Vector3) * newSpeed
 	self.target = nil -- force retarget next step based on new velocity
 
 	-- visual: adopt the deflector's chosen sack skin
 	self:_setHolderSkin(player)
 	-- broadcast a kick FX cue so all clients animate that player's leg
 	Remotes.KickFX:FireAllClients(player, dir)
+
+	if self._onDeflect then
+		self._onDeflect(player, self.consecutiveByLast)
+	end
 
 	self:_broadcastSnapshot()
 	return true

@@ -11,6 +11,7 @@ local EquipUI = require(script:WaitForChild("EquipUI"))
 local LobbyHUD = require(script:WaitForChild("LobbyHUD"))
 local MatchSummary = require(script:WaitForChild("MatchSummary"))
 local DropAlerts = require(script:WaitForChild("DropAlerts"))
+local PracticeHUD = require(script:WaitForChild("PracticeHUD"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -23,12 +24,41 @@ local function aimDirection(): Vector3
 	return camera.CFrame.LookVector
 end
 
+-- Cursor-aim raycast: if the cursor is over another player's character, return their UserId
+-- so the server aims the sack directly at them. Falls back to 0 (= use camera direction).
+local function cursorTargetUserId(): number
+	local camera = Workspace.CurrentCamera
+	if not camera then
+		return 0
+	end
+	local mouse = UserInputService:GetMouseLocation()
+	local ray = camera:ScreenPointToRay(mouse.X, mouse.Y)
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	if player.Character then
+		rayParams.FilterDescendantsInstances = { player.Character }
+	end
+	local result = Workspace:Raycast(ray.Origin, ray.Direction * 600, rayParams)
+	if not result then
+		return 0
+	end
+	local model = result.Instance:FindFirstAncestorOfClass("Model")
+	if not model then
+		return 0
+	end
+	local hitPlayer = Players:GetPlayerFromCharacter(model)
+	if not hitPlayer or hitPlayer == player then
+		return 0
+	end
+	return hitPlayer.UserId
+end
+
 local function tryDeflect(source: string)
 	print(string.format("[Sacktopia] %s pressed (windowOpen=%s)", source, tostring(windowOpen)))
 	if not windowOpen then
 		return
 	end
-	Remotes.DeflectAttempt:FireServer(aimDirection(), workspace:GetServerTimeNow())
+	Remotes.DeflectAttempt:FireServer(aimDirection(), workspace:GetServerTimeNow(), cursorTargetUserId())
 end
 
 -- Listen to *all* keyboard input — don't gate on `processed` because Roblox's default
@@ -76,4 +106,5 @@ EquipUI.start()
 LobbyHUD.start()
 MatchSummary.start()
 DropAlerts.start()
+PracticeHUD.start()
 print("[Sacktopia] client boot")
