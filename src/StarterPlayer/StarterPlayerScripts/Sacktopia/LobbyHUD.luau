@@ -243,7 +243,8 @@ local function refreshRankCard()
 	end
 	rankProgressFill.Size = UDim2.fromScale(Ranks.progress(stats.points), 1)
 	rankProgressFill.BackgroundColor3 = tier.color
-	statsLabel.Text = string.format("%dW • %d top-3 • %d played", stats.wins, stats.top3, stats.matchesPlayed)
+	local coins = stats.coins or 0
+	statsLabel.Text = string.format("%dW • %d top-3 • %d played • 🪙 %d", stats.wins, stats.top3, stats.matchesPlayed, coins)
 end
 
 local function refreshWorlds()

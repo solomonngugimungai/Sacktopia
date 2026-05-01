@@ -2,10 +2,17 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Remotes = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Remotes"))
+local Config = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Config"))
+local Remotes = require(ReplicatedStorage.Sacktopia:WaitForChild("Remotes"))
 local Worlds = require(ReplicatedStorage.Sacktopia:WaitForChild("Worlds"))
 local PlayerState = require(script.Parent.PlayerState)
 local SackController = require(script.Parent:WaitForChild("SackController"))
+
+local function dbg(...)
+	if Config.Debug.Logs then
+		print(...)
+	end
+end
 
 type World = Worlds.World
 
@@ -42,14 +49,14 @@ function Practice.isInSession(player: Player): boolean
 end
 
 function Practice.startSession(player: Player, world: World)
-	print(string.format("[Sacktopia] startSession requested by %s, world.id=%s, isPractice=%s",
+	dbg(string.format("[Sacktopia] startSession requested by %s, world.id=%s, isPractice=%s",
 		player.Name, world.id, tostring(world.isPractice)))
 	if not world.isPractice then
-		print("[Sacktopia] startSession rejected: world is not Practice")
+		dbg("[Sacktopia] startSession rejected: world is not Practice")
 		return
 	end
 	if sessions[player] then
-		print("[Sacktopia] startSession rejected: already in a session")
+		dbg("[Sacktopia] startSession rejected: already in a session")
 		return -- already in a session
 	end
 
@@ -93,7 +100,7 @@ function Practice.startSession(player: Player, world: World)
 	session.sack = builtSack
 	sessions[player] = session
 	fireStats(session, true)
-	print(string.format("[Sacktopia] startSession SUCCESS for %s", player.Name))
+	dbg(string.format("[Sacktopia] startSession SUCCESS for %s", player.Name))
 end
 
 function Practice.endSession(player: Player)

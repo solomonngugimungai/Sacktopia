@@ -4,12 +4,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Config"))
 local Remotes = require(ReplicatedStorage.Sacktopia:WaitForChild("Remotes"))
+local RateLimit = require(script.Parent:WaitForChild("RateLimit"))
 
 local Dash = {}
 
 local lastDashAt: { [Player]: number } = {}
 
 local function tryDash(player: Player, direction: Vector3)
+	if not RateLimit.allow(player, "DashRequest") then
+		return
+	end
 	if typeof(direction) ~= "Vector3" then
 		return
 	end

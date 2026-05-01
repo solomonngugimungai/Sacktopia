@@ -22,6 +22,7 @@ local MatchController = require(script.Parent:WaitForChild("MatchController"))
 local Practice = require(script.Parent:WaitForChild("Practice"))
 local PlayerState = require(script.Parent.PlayerState)
 local PlayerStats = require(script.Parent:WaitForChild("PlayerStats"))
+local RateLimit = require(script.Parent:WaitForChild("RateLimit"))
 
 type World = Worlds.World
 
@@ -272,14 +273,18 @@ end
 
 local function bindQueuePadTouch(worldId: string, pad: BasePart)
 	local world = Worlds.byId(worldId)
-	print(string.format("[Sacktopia] bound pad for world=%s, isPractice=%s", worldId, tostring(world and world.isPractice)))
+	if Config.Debug.Logs then
+		print(string.format("[Sacktopia] bound pad for world=%s, isPractice=%s", worldId, tostring(world and world.isPractice)))
+	end
 	pad.Touched:Connect(function(hit: BasePart)
 		local player = resolveTouchedPlayer(hit, 0.4)
 		if not player then
 			return
 		end
-		print(string.format("[Sacktopia] pad TOUCHED in world=%s by %s (isPractice=%s)",
-			worldId, player.Name, tostring(world and world.isPractice)))
+		if Config.Debug.Logs then
+			print(string.format("[Sacktopia] pad TOUCHED in world=%s by %s (isPractice=%s)",
+				worldId, player.Name, tostring(world and world.isPractice)))
+		end
 		if world and world.isPractice then
 			Practice.startSession(player, world)
 		else
@@ -373,6 +378,9 @@ function Lobby.start()
 
 	-- deflect remote → forward to whichever match (or practice session) the player is in
 	Remotes.DeflectAttempt.OnServerEvent:Connect(function(player: Player, aimDirection, clientTime, targetUserId)
+		if not RateLimit.allow(player, "DeflectAttempt") then
+			return
+		end
 		if typeof(aimDirection) ~= "Vector3" or typeof(clientTime) ~= "number" then
 			return
 		end
@@ -394,12 +402,18 @@ function Lobby.start()
 	end)
 
 	Remotes.JoinQueue.OnServerEvent:Connect(function(player: Player, worldId)
+		if not RateLimit.allow(player, "JoinQueue") then
+			return
+		end
 		if typeof(worldId) ~= "string" then
 			return
 		end
 		joinQueue(player, worldId)
 	end)
 	Remotes.LeaveQueue.OnServerEvent:Connect(function(player: Player)
+		if not RateLimit.allow(player, "LeaveQueue") then
+			return
+		end
 		leaveQueue(player)
 	end)
 

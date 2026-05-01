@@ -209,8 +209,10 @@ function SackController:_pickInitialTarget()
 end
 
 function SackController:start()
-	print(string.format("[Sacktopia] SackController:start practiceMode=%s rosterCount=%d",
-		tostring(self.practiceMode), #self.roster))
+	if Config.Debug.Logs then
+		print(string.format("[Sacktopia] SackController:start practiceMode=%s rosterCount=%d",
+			tostring(self.practiceMode), #self.roster))
+	end
 	-- Practice mode: spawn the sack directly above the practice player and just let it
 	-- fall straight down — pure vertical from the start.
 	if self.practiceMode and self.roster[1] then
@@ -219,7 +221,7 @@ function SackController:start()
 		if root then
 			self.position = Vector3.new(root.Position.X, root.Position.Y + self.arena.sackSpawnHeight, root.Position.Z)
 			self.part.Position = self.position
-		else
+		elseif Config.Debug.Logs then
 			print(string.format("[Sacktopia] WARN no characterRoot for %s in practice start", p.Name))
 		end
 		self.velocity = Vector3.new(0, 0, 0) -- gravity will start pulling it down
@@ -382,7 +384,9 @@ function SackController:_maybeOpenWindow()
 		local eta = (root.Position - self.position).Magnitude / math.max(v, 1)
 		self.predictedImpactAt = workspace:GetServerTimeNow() + eta
 		Remotes.WindowOpened:FireClient(target, self.id, self.predictedImpactAt)
-		print(string.format("[Sacktopia] window OPEN for %s (zoneDist=%.1f, eta=%.2fs)", target.Name, horizDist, eta))
+		if Config.Debug.Logs then
+			print(string.format("[Sacktopia] window OPEN for %s (zoneDist=%.1f, eta=%.2fs)", target.Name, horizDist, eta))
+		end
 	end
 end
 
@@ -574,8 +578,10 @@ function SackController:_step(dt: number)
 end
 
 function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, _clientTime: number, targetUserId: number?)
-	print(string.format("[Sacktopia] deflect attempt from %s (windowOpenFor=%s, alive=%s)",
-		player.Name, tostring(self.windowOpenFor and self.windowOpenFor.Name or "nil"), tostring(self.alive)))
+	if Config.Debug.Logs then
+		print(string.format("[Sacktopia] deflect attempt from %s (windowOpenFor=%s, alive=%s)",
+			player.Name, tostring(self.windowOpenFor and self.windowOpenFor.Name or "nil"), tostring(self.alive)))
+	end
 	if not self.alive or self.windowOpenFor ~= player then
 		return false
 	end

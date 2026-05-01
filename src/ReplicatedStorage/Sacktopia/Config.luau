@@ -64,8 +64,9 @@ Config.Trail = {
 }
 
 Config.Equip = {
-	-- v2: in-memory inventory only. Persistence (DataStore) lands in v3.
-	GrantAllOnJoin = true,
+	-- New in-memory inventories grant Starter items only by default; in dev (Debug.GrantAllItems)
+	-- every player gets every cosmetic so we can test cycling without buying.
+	-- Persistence is now handled by PlayerData.luau.
 	DefaultLoadout = {
 		Head = "BasicCap",
 		Hand = "None",
@@ -85,6 +86,41 @@ Config.Dash = {
 	Cooldown = 5,
 	Impulse = 6000, -- raw impulse magnitude applied to the HumanoidRootPart
 	UpwardComponent = 0.15, -- small lift so dashes feel snappy
+}
+
+-- Master debug switches. Flip Enabled = false for public release; flip Logs to false to
+-- silence the diagnostic prints; flip GrantAllItems to false so only Starter cosmetics
+-- are owned at first join (production progression).
+Config.Debug = {
+	Enabled = false,
+	Logs = false,
+	GrantAllItems = false,
+}
+
+-- Coins are a separate currency from rank Points — used (later) to buy cosmetics.
+Config.Coins = {
+	[1] = 50,
+	[2] = 20,
+	[3] = 10,
+	Participation = 5,
+}
+
+-- Built-in Roblox sounds; the user can swap any of these for purchased asset IDs later.
+Config.Sounds = {
+	Deflect = "rbxasset://sounds/electronicpingshort.wav",
+	Drop = "rbxasset://sounds/snap.mp3",
+	Eliminated = "rbxasset://sounds/uuhhh.mp3",
+	Win = "rbxasset://sounds/action_jump_landing.mp3",
+	UiClick = "rbxasset://sounds/electronicpingshort.wav",
+}
+
+-- Anti-spam intervals in seconds for each client→server remote.
+Config.RateLimit = {
+	DeflectAttempt = 0.05, -- 20 Hz cap
+	EquipItem = 0.4,
+	JoinQueue = 0.3,
+	LeaveQueue = 0.3,
+	DashRequest = 0.5,
 }
 
 -- Streak thresholds — name + min consecutive eliminations within a single match

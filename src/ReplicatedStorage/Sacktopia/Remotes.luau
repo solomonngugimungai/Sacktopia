@@ -68,6 +68,8 @@ local Remotes = {
 	KillFeed = getOrCreate(root, "RemoteEvent", "KillFeed") :: RemoteEvent,
 	-- server → all: streak announcement {playerName, streakName, count}
 	StreakAlert = getOrCreate(root, "RemoteEvent", "StreakAlert") :: RemoteEvent,
+	-- server → all: top-N leaderboard snapshot { entries = { {userId, displayName, points, tierId, wins} } }
+	LeaderboardSnapshot = getOrCreate(root, "RemoteEvent", "LeaderboardSnapshot") :: RemoteEvent,
 }
 
 return Remotes

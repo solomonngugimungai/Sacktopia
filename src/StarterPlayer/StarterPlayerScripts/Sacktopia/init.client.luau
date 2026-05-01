@@ -18,6 +18,8 @@ local Killfeed = require(script:WaitForChild("Killfeed"))
 local Crosshair = require(script:WaitForChild("Crosshair"))
 local CameraShake = require(script:WaitForChild("CameraShake"))
 local StreakAlert = require(script:WaitForChild("StreakAlert"))
+local LeaderboardHUD = require(script:WaitForChild("LeaderboardHUD"))
+local Sounds = require(script:WaitForChild("Sounds"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -59,8 +61,7 @@ local function cursorTargetUserId(): number
 	return hitPlayer.UserId
 end
 
-local function tryDeflect(source: string)
-	print(string.format("[Sacktopia] %s pressed (windowOpen=%s)", source, tostring(windowOpen)))
+local function tryDeflect(_source: string)
 	if not windowOpen then
 		return
 	end
@@ -119,4 +120,6 @@ Killfeed.start()
 Crosshair.start()
 CameraShake.start()
 StreakAlert.start()
+LeaderboardHUD.start()
+Sounds.start()
 print("[Sacktopia] client boot")

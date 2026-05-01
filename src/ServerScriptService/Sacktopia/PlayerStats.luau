@@ -2,8 +2,10 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Ranks = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Ranks"))
+local Config = require(ReplicatedStorage:WaitForChild("Sacktopia"):WaitForChild("Config"))
+local Ranks = require(ReplicatedStorage.Sacktopia:WaitForChild("Ranks"))
 local Remotes = require(ReplicatedStorage.Sacktopia:WaitForChild("Remotes"))
+local PlayerData = require(script.Parent:WaitForChild("PlayerData"))
 
 export type Stats = {
 	wins: number,
@@ -11,81 +13,90 @@ export type Stats = {
 	points: number,
 	matchesPlayed: number,
 	tierId: string,
+	coins: number,
 }
 
 local PlayerStats = {}
 
-local data: { [Player]: Stats } = {}
-
-local function snapshot(player: Player): Stats?
-	return data[player]
-end
-
 local function fire(player: Player)
-	local s = data[player]
-	if s then
-		Remotes.StatsUpdated:FireClient(player, s)
+	local save = PlayerData.get(player)
+	if not save then
+		return
 	end
-end
-
-function PlayerStats.add(player: Player)
-	local s: Stats = {
-		wins = 0,
-		top3 = 0,
-		points = 0,
-		matchesPlayed = 0,
-		tierId = "Bronze",
-	}
-	data[player] = s
-	fire(player)
-end
-
-function PlayerStats.remove(player: Player)
-	data[player] = nil
+	Remotes.StatsUpdated:FireClient(player, {
+		wins = save.wins,
+		top3 = save.top3,
+		points = save.points,
+		matchesPlayed = save.matchesPlayed,
+		tierId = save.tierId,
+		coins = save.coins,
+	})
 end
 
 function PlayerStats.get(player: Player): Stats?
-	return data[player]
+	local save = PlayerData.get(player)
+	if not save then
+		return nil
+	end
+	return {
+		wins = save.wins,
+		top3 = save.top3,
+		points = save.points,
+		matchesPlayed = save.matchesPlayed,
+		tierId = save.tierId,
+		coins = save.coins,
+	}
+end
+
+local function coinsForPlacement(placement: number): number
+	local c = Config.Coins[placement]
+	if c then
+		return c
+	end
+	return Config.Coins.Participation
 end
 
 function PlayerStats.recordMatch(player: Player, placement: number, totalPlayers: number)
-	local s = data[player]
-	if not s then
+	local save = PlayerData.get(player)
+	if not save then
 		return
 	end
-	local fromTier = s.tierId
+	local fromTier = save.tierId
 	local pts = Ranks.pointsForPlacement(placement)
-	s.matchesPlayed += 1
-	s.points += pts
+	local coins = coinsForPlacement(placement)
+	save.matchesPlayed += 1
+	save.points += pts
+	save.coins += coins
 	if placement == 1 then
-		s.wins += 1
+		save.wins += 1
 	end
 	if placement <= 3 then
-		s.top3 += 1
+		save.top3 += 1
 	end
-	local newTier = Ranks.tierForPoints(s.points)
-	s.tierId = newTier.id
+	local newTier = Ranks.tierForPoints(save.points)
+	save.tierId = newTier.id
+	PlayerData.markDirty(player)
 	fire(player)
 	if newTier.id ~= fromTier and Ranks.tierIndex(newTier.id) > Ranks.tierIndex(fromTier) then
 		Remotes.RankUp:FireClient(player, { fromTierId = fromTier, toTierId = newTier.id })
 	end
-	-- match summary remote (lets client show placement card)
 	Remotes.MatchEnded:FireClient(player, {
 		placement = placement,
 		totalPlayers = totalPlayers,
 		pointsEarned = pts,
-		totalPoints = s.points,
+		coinsEarned = coins,
+		totalPoints = save.points,
+		totalCoins = save.coins,
 		fromTierId = fromTier,
-		toTierId = s.tierId,
+		toTierId = save.tierId,
 	})
 end
 
 function PlayerStats.start()
-	for _, p in Players:GetPlayers() do
-		PlayerStats.add(p)
-	end
-	Players.PlayerAdded:Connect(PlayerStats.add)
-	Players.PlayerRemoving:Connect(PlayerStats.remove)
+	-- Stats live in PlayerData; we just push the snapshot whenever a player loads in.
+	PlayerData.onLoaded(function(player, _save)
+		fire(player)
+	end)
 end
 
 return PlayerStats
