@@ -334,7 +334,15 @@ function Lobby.start()
 		if lobbySpawn then
 			player.RespawnLocation = lobbySpawn
 		end
-		player.CharacterAdded:Connect(function()
+		player.CharacterAdded:Connect(function(character: Model)
+			-- disable jumping so SPACE only triggers deflect, never jump
+			task.spawn(function()
+				local hum = character:WaitForChild("Humanoid", 5)
+				if hum and hum:IsA("Humanoid") then
+					hum.JumpPower = 0
+					hum.JumpHeight = 0
+				end
+			end)
 			-- if not in a match, send to lobby (defense in depth — RespawnLocation should already do this)
 			if not isInAnyMatch(player) then
 				task.wait(0.1)

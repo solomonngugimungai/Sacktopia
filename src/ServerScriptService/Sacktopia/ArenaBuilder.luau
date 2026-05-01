@@ -158,10 +158,13 @@ local stagingCFrames: { [string]: CFrame } = {}
 
 export type Portal = { world: Worlds.World, part: BasePart }
 
-local LOBBY_DARK = Color3.fromRGB(20, 14, 38)
-local LOBBY_DARK_2 = Color3.fromRGB(34, 22, 58)
-local NEON_CYAN = Color3.fromRGB(80, 220, 255)
-local NEON_MAGENTA = Color3.fromRGB(255, 70, 200)
+-- Chill Blade-Ball-style lobby palette: dark stone, warm bronze trim, soft gold accent.
+-- No neon as a structural element — neon is reserved for the world portals (focal points).
+local LOBBY_FLOOR = Color3.fromRGB(38, 34, 42) -- dark cool stone
+local LOBBY_RIM = Color3.fromRGB(28, 24, 32) -- darker plinth
+local LOBBY_BRONZE = Color3.fromRGB(120, 90, 60) -- warm metal trim
+local LOBBY_GOLD = Color3.fromRGB(200, 170, 110) -- subtle accent (used sparingly)
+local LOBBY_WALL = Color3.fromRGB(50, 44, 56) -- slightly lifted from floor for definition
 
 local function buildLobby(root: Folder)
 	local lobbyFolder = Instance.new("Folder")
@@ -171,67 +174,55 @@ local function buildLobby(root: Folder)
 	local center = Config.Lobby.Center
 	local r = Config.Lobby.PlatformRadius
 
-	-- tiered glow plinth
-	local glowDisc = disc("LobbyGlow", center - Vector3.new(0, 1.5, 0), r + 8, 0.4, NEON_CYAN, Enum.Material.Neon)
-	glowDisc.CanCollide = false
-	glowDisc.Transparency = 0.2
-	glowDisc.Parent = lobbyFolder
-
-	local underTier = disc("LobbyUnder", center - Vector3.new(0, 1.0, 0), r + 4, 1.5, LOBBY_DARK, Enum.Material.SmoothPlastic)
+	-- tiered plinth: lower darker layer + main marble floor + thin bronze rim
+	local underTier = disc("LobbyUnder", center - Vector3.new(0, 1.0, 0), r + 4, 1.5, LOBBY_RIM, Enum.Material.Slate)
 	underTier.CanCollide = false
 	underTier.Parent = lobbyFolder
 
-	local mainPad = disc("LobbyPad", center, r, Config.Lobby.PlatformThickness, LOBBY_DARK_2, Enum.Material.SmoothPlastic)
+	local mainPad = disc("LobbyPad", center, r, Config.Lobby.PlatformThickness, LOBBY_FLOOR, Enum.Material.Marble)
 	mainPad.Parent = lobbyFolder
 
-	-- magenta trim ring on top edge (thin disc with hollow look = full disc in neon, slightly raised)
-	local trim = disc("LobbyTrim", center + Vector3.new(0, Config.Lobby.PlatformThickness / 2 + 0.05, 0), r, 0.1, NEON_MAGENTA, Enum.Material.Neon)
+	-- thin bronze rim — material Foil reads as warm metal, not neon
+	local trim = disc(
+		"LobbyTrim",
+		center + Vector3.new(0, Config.Lobby.PlatformThickness / 2 + 0.05, 0),
+		r,
+		0.08,
+		LOBBY_BRONZE,
+		Enum.Material.Foil
+	)
 	trim.CanCollide = false
 	trim.Parent = lobbyFolder
 
-	-- radial floor lines (alternating cyan/magenta)
-	for i = 1, 8 do
-		local angle = (i - 1) / 8 * math.pi * 2
-		local color = (i % 2 == 0) and NEON_CYAN or NEON_MAGENTA
-		local len = r - 8
-		local cx = math.cos(angle) * (len / 2 + 6)
-		local cz = math.sin(angle) * (len / 2 + 6)
-		local stripe = part({
-			Name = "FloorStripe_" .. i,
-			Size = Vector3.new(len, 0.1, 0.6),
-			CFrame = CFrame.new(center + Vector3.new(cx, Config.Lobby.PlatformThickness / 2 + 0.06, cz))
-				* CFrame.Angles(0, -angle, 0),
-			Color = color,
-			Material = Enum.Material.Neon,
-			CanCollide = false,
-		})
-		stripe.Transparency = 0.05
-		stripe.Parent = lobbyFolder
-	end
-
-	-- center pillar (energy beam)
+	-- center pillar: stone column, no glow beam, no halo
 	local pillar = part({
 		Name = "CenterPillar",
 		Shape = Enum.PartType.Cylinder,
-		Size = Vector3.new(45, 5, 5), -- length along X (will become height after rotate)
-		CFrame = CFrame.new(center + Vector3.new(0, 22, 0)) * CFrame.Angles(0, 0, math.rad(90)),
-		Color = NEON_CYAN,
-		Material = Enum.Material.Neon,
-		CanCollide = false,
-		Transparency = 0.15,
+		Size = Vector3.new(38, 6, 6),
+		CFrame = CFrame.new(center + Vector3.new(0, 19, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = LOBBY_WALL,
+		Material = Enum.Material.Marble,
+		CanCollide = true,
 	})
 	pillar.Parent = lobbyFolder
-	local pillarLight = Instance.new("PointLight")
-	pillarLight.Color = NEON_CYAN
-	pillarLight.Brightness = 4
-	pillarLight.Range = 60
-	pillarLight.Parent = pillar
-
-	-- pillar cap halo (a thin disc above)
-	local cap = disc("PillarCap", center + Vector3.new(0, 46, 0), 9, 0.4, NEON_MAGENTA, Enum.Material.Neon)
-	cap.CanCollide = false
-	cap.Transparency = 0.1
-	cap.Parent = lobbyFolder
+	-- bronze cap on top of pillar
+	local pillarCap = part({
+		Name = "PillarCap",
+		Size = Vector3.new(8.5, 1.2, 8.5),
+		CFrame = CFrame.new(center + Vector3.new(0, 38.6, 0)),
+		Color = LOBBY_BRONZE,
+		Material = Enum.Material.Foil,
+	})
+	pillarCap.Parent = lobbyFolder
+	-- bronze base
+	local pillarBase = part({
+		Name = "PillarBase",
+		Size = Vector3.new(9, 1.6, 9),
+		CFrame = CFrame.new(center + Vector3.new(0, Config.Lobby.PlatformThickness / 2 + 0.8, 0)),
+		Color = LOBBY_BRONZE,
+		Material = Enum.Material.Foil,
+	})
+	pillarBase.Parent = lobbyFolder
 
 	-- portal angles around the perimeter
 	local portalAngles = {}
@@ -240,23 +231,22 @@ local function buildLobby(root: Folder)
 		table.insert(portalAngles, angle)
 	end
 
-	-- low decorative parapet so the worlds below stay visible (Natural Disasters style)
+	-- low stone parapet — no neon top accent, just clean stone
 	wallRing(lobbyFolder, {
 		center = center,
 		radius = r - 1,
 		height = Config.Lobby.RailingHeight,
 		thickness = 1.2,
 		segmentCount = 32,
-		color = LOBBY_DARK,
-		material = Enum.Material.SmoothPlastic,
-		topAccentColor = NEON_MAGENTA,
-		topAccentMaterial = Enum.Material.Neon,
+		color = LOBBY_WALL,
+		material = Enum.Material.Marble,
+		topAccentColor = LOBBY_BRONZE,
+		topAccentMaterial = Enum.Material.Foil,
 		gapAngles = portalAngles,
 		gapHalfWidth = math.rad(11),
 	})
 
-	-- invisible safety barrier above the parapet so nobody falls off this 1000-stud-high lobby.
-	-- Only the doorways (gaps) let players through; portals teleport them before they fall.
+	-- invisible safety barrier above the parapet
 	wallRing(lobbyFolder, {
 		center = center,
 		radius = r - 0.6,
@@ -268,14 +258,13 @@ local function buildLobby(root: Folder)
 		gapAngles = portalAngles,
 		gapHalfWidth = math.rad(11),
 	})
-	-- (set transparency on the barrier segments now that they exist)
 	for _, child in lobbyFolder:GetChildren() do
 		if child:IsA("BasePart") and child.Material == Enum.Material.ForceField and child.Name:match("^WallSeg_") then
-			child.Transparency = 0.85
+			child.Transparency = 0.92 -- almost fully transparent, just a faint sheen
 		end
 	end
 
-	-- short pylon at each gap to frame the portal doorway visually
+	-- short stone pylon at each gap, no point lights — keep the lobby itself dim
 	for _, angle in portalAngles do
 		for _, side in { -1, 1 } do
 			local sideAngle = angle + side * math.rad(11)
@@ -285,75 +274,57 @@ local function buildLobby(root: Folder)
 				Name = "PortalFrame",
 				Size = Vector3.new(1.6, 8, 1.6),
 				CFrame = CFrame.new(center + Vector3.new(px, 4, pz)),
-				Color = LOBBY_DARK,
-				Material = Enum.Material.SmoothPlastic,
+				Color = LOBBY_WALL,
+				Material = Enum.Material.Marble,
 			})
 			pillarPost.Parent = lobbyFolder
-			local pl = Instance.new("PointLight")
-			pl.Color = NEON_CYAN
-			pl.Brightness = 1.2
-			pl.Range = 14
-			pl.Parent = pillarPost
+			-- bronze cap on each pylon for definition
+			local postCap = part({
+				Name = "PortalFrameCap",
+				Size = Vector3.new(2.2, 0.4, 2.2),
+				CFrame = CFrame.new(center + Vector3.new(px, 8.2, pz)),
+				Color = LOBBY_BRONZE,
+				Material = Enum.Material.Foil,
+			})
+			postCap.Parent = lobbyFolder
 		end
 	end
 
-	-- spawn pad (replaces the previous neon spawn — keeps it a SpawnLocation)
+	-- spawn pad: marble disc with a subtle gold ring around it (no neon glow)
 	local spawnPart = Instance.new("SpawnLocation")
 	spawnPart.Name = "LobbySpawn"
-	spawnPart.Size = Vector3.new(10, 1, 10)
-	spawnPart.CFrame = CFrame.new(center + Vector3.new(0, Config.Lobby.PlatformThickness / 2 + 0.5, 0))
+	spawnPart.Size = Vector3.new(10, 0.6, 10)
+	spawnPart.CFrame = CFrame.new(center + Vector3.new(0, Config.Lobby.PlatformThickness / 2 + 0.3, 0))
 	spawnPart.Anchored = true
 	spawnPart.CanCollide = true
 	spawnPart.Neutral = true
 	spawnPart.AllowTeamChangeOnTouch = false
 	spawnPart.TopSurface = Enum.SurfaceType.Smooth
-	spawnPart.Material = Enum.Material.Neon
-	spawnPart.Color = NEON_CYAN
-	spawnPart.Transparency = 0.25
+	spawnPart.Material = Enum.Material.Marble
+	spawnPart.Color = LOBBY_WALL
+	spawnPart.Transparency = 0
 	spawnPart.Parent = lobbyFolder
-	-- octagon ring around spawn pad
+	-- 8 small bronze nubs ringing the spawn pad
 	for i = 1, 8 do
 		local angle = (i - 0.5) / 8 * math.pi * 2
-		local rx = math.cos(angle) * 7
-		local rz = math.sin(angle) * 7
+		local rx = math.cos(angle) * 6
+		local rz = math.sin(angle) * 6
 		local nub = part({
 			Name = "SpawnRing_" .. i,
-			Size = Vector3.new(1.2, 0.4, 1.2),
+			Size = Vector3.new(0.8, 0.3, 0.8),
 			CFrame = CFrame.new(center + Vector3.new(rx, Config.Lobby.PlatformThickness / 2 + 0.4, rz)),
-			Color = NEON_MAGENTA,
-			Material = Enum.Material.Neon,
-			CanCollide = false,
+			Color = LOBBY_BRONZE,
+			Material = Enum.Material.Foil,
 		})
 		nub.Parent = lobbyFolder
 	end
 
-	-- lobby title hovering above pillar
-	billboard(pillar, "SACKTOPIA", Color3.fromRGB(255, 255, 255), Vector2.new(28, 6), 24)
-	billboard(pillar, "PVP HACKY SACK", NEON_CYAN, Vector2.new(20, 2.4), 30)
-	billboard(pillar, "WALK THROUGH A PORTAL TO PLAY", Color3.fromRGB(255, 220, 255), Vector2.new(24, 2), 18)
+	-- lobby title — white + soft gold subtitle, no glowing colors
+	billboard(pillar, "SACKTOPIA", Color3.fromRGB(245, 245, 245), Vector2.new(28, 6), 22)
+	billboard(pillar, "PVP HACKY SACK", LOBBY_GOLD, Vector2.new(20, 2.4), 28)
+	billboard(pillar, "Walk through a portal to play", Color3.fromRGB(180, 180, 180), Vector2.new(24, 2), 16)
 
-	-- ambient particle emitter on the pillar (rising sparks)
-	local emitterAttach = Instance.new("Attachment")
-	emitterAttach.Position = Vector3.new(0, -22, 0)
-	emitterAttach.Parent = pillar
-	local emitter = Instance.new("ParticleEmitter")
-	emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-	emitter.Rate = 28
-	emitter.Lifetime = NumberRange.new(2.5, 4)
-	emitter.Speed = NumberRange.new(2, 5)
-	emitter.SpreadAngle = Vector2.new(20, 20)
-	emitter.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.4),
-		NumberSequenceKeypoint.new(1, 0),
-	})
-	emitter.Color = ColorSequence.new(NEON_CYAN, NEON_MAGENTA)
-	emitter.LightEmission = 0.8
-	emitter.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.2),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	emitter.Acceleration = Vector3.new(0, 6, 0)
-	emitter.Parent = emitterAttach
+	-- (no particle emitter — keeping the lobby visually quiet)
 
 	lobbySpawn = spawnPart
 end
@@ -2078,29 +2049,30 @@ local function getOrMake(parent: Instance, className: string, name: string): Ins
 end
 
 local function tuneLightingForLobby()
-	Lighting.Ambient = Color3.fromRGB(80, 80, 100)
-	Lighting.OutdoorAmbient = Color3.fromRGB(120, 120, 140)
+	-- warmer, calmer ambient — lobby reads as a quiet stone interior, not a rave
+	Lighting.Ambient = Color3.fromRGB(110, 100, 90)
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 140, 125)
 	Lighting.Brightness = 2
 
-	-- bloom: makes neon parts pop dramatically
+	-- bloom: only the bright portals should bloom now; threshold high so stone doesn't glow
 	local bloom = getOrMake(Lighting, "BloomEffect", "SacktopiaBloom") :: BloomEffect
-	bloom.Intensity = 0.6
-	bloom.Size = 28
-	bloom.Threshold = 0.85
+	bloom.Intensity = 0.25
+	bloom.Size = 18
+	bloom.Threshold = 0.95
 
-	-- atmosphere: adds depth haze, separates the lobby from the worlds below visually
+	-- atmosphere: warm haze instead of cool purple — sells the chill stone interior
 	local atmosphere = getOrMake(Lighting, "Atmosphere", "SacktopiaAtmosphere") :: Atmosphere
-	atmosphere.Density = 0.18
-	atmosphere.Offset = 0.25
-	atmosphere.Color = Color3.fromRGB(90, 80, 110)
-	atmosphere.Decay = Color3.fromRGB(60, 50, 90)
-	atmosphere.Glare = 0.6
-	atmosphere.Haze = 1.6
+	atmosphere.Density = 0.12
+	atmosphere.Offset = 0.2
+	atmosphere.Color = Color3.fromRGB(150, 130, 110)
+	atmosphere.Decay = Color3.fromRGB(80, 70, 60)
+	atmosphere.Glare = 0.2
+	atmosphere.Haze = 0.8
 
-	-- color correction: subtle saturation + contrast bump
+	-- color correction: very mild — don't oversaturate, the lobby is muted
 	local cc = getOrMake(Lighting, "ColorCorrectionEffect", "SacktopiaColor") :: ColorCorrectionEffect
-	cc.Saturation = 0.12
-	cc.Contrast = 0.08
+	cc.Saturation = 0.03
+	cc.Contrast = 0.05
 	cc.Brightness = 0
 end
 

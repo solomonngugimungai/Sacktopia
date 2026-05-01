@@ -9,6 +9,10 @@
       "$path": "src/ServerScriptService"
     },
     "StarterPlayer": {
+      "$properties": {
+        "CharacterJumpPower": 0,
+        "CharacterUseJumpPower": true
+      },
       "StarterPlayerScripts": {
         "$path": "src/StarterPlayer/StarterPlayerScripts"
       }

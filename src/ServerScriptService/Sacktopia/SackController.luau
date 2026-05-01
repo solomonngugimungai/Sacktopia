@@ -498,7 +498,8 @@ function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, 
 	self.speed = newSpeed
 
 	-- Cursor-aim: if the client identified a target player, aim at them. Otherwise fall
-	-- back to the camera lookVector the client sent.
+	-- back to the camera lookVector — except in practice with no cursor target, where we
+	-- default to "mostly up" so the player can self-juggle by spamming SPACE.
 	local dir: Vector3? = nil
 	if targetUserId and targetUserId > 0 then
 		local targetPlayer = Players:GetPlayerByUserId(targetUserId)
@@ -510,7 +511,11 @@ function SackController:onDeflectAttempt(player: Player, aimDirection: Vector3, 
 		end
 	end
 	if not dir then
-		if aimDirection.Magnitude < 0.01 then
+		if self.practiceMode then
+			-- juggle-friendly: sack goes mostly straight up so it lands back on the practice player
+			local lateral = Vector3.new(aimDirection.X, 0, aimDirection.Z) * 0.15
+			dir = (Vector3.new(0, 1, 0) + lateral).Unit
+		elseif aimDirection.Magnitude < 0.01 then
 			dir = Vector3.new(0, 1, 0)
 		else
 			dir = aimDirection.Unit
