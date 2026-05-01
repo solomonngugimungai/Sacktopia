@@ -117,6 +117,42 @@ Items.Skins = {
 		material = Enum.Material.Neon,
 		transparency = 0.05,
 	} :: SackSkin,
+	Flame = {
+		id = "Flame",
+		name = "Flame Sack",
+		rarity = "Rare",
+		color = Color3.fromRGB(255, 110, 40),
+		material = Enum.Material.Neon,
+		transparency = 0,
+		cycleColors = {
+			Color3.fromRGB(255, 80, 30),
+			Color3.fromRGB(255, 200, 80),
+			Color3.fromRGB(255, 60, 0),
+		},
+		cycleSpeed = 4,
+	} :: SackSkin,
+	Frozen = {
+		id = "Frozen",
+		name = "Frozen Sack",
+		rarity = "Rare",
+		color = Color3.fromRGB(160, 230, 255),
+		material = Enum.Material.Glass,
+		transparency = 0.15,
+	} :: SackSkin,
+	Void = {
+		id = "Void",
+		name = "Void Sack",
+		rarity = "Event",
+		color = Color3.fromRGB(40, 10, 60),
+		material = Enum.Material.Neon,
+		transparency = 0.2,
+		cycleColors = {
+			Color3.fromRGB(40, 10, 60),
+			Color3.fromRGB(120, 20, 200),
+			Color3.fromRGB(20, 0, 40),
+		},
+		cycleSpeed = 0.6,
+	} :: SackSkin,
 }
 
 function Items.getItem(id: string): Item?

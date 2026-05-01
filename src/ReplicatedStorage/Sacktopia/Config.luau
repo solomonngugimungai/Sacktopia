@@ -80,6 +80,22 @@ Config.KickFX = {
 	SwingBackSeconds = 0.16,
 }
 
+-- Dash ability (Q key): short directional impulse with cooldown
+Config.Dash = {
+	Cooldown = 5,
+	Impulse = 6000, -- raw impulse magnitude applied to the HumanoidRootPart
+	UpwardComponent = 0.15, -- small lift so dashes feel snappy
+}
+
+-- Streak thresholds — name + min consecutive eliminations within a single match
+Config.Streaks = {
+	{ count = 2, name = "DOUBLE KILL", color = Color3.fromRGB(255, 200, 80) },
+	{ count = 3, name = "TRIPLE KILL", color = Color3.fromRGB(255, 140, 60) },
+	{ count = 4, name = "QUADRA KILL", color = Color3.fromRGB(255, 60, 80) },
+	{ count = 5, name = "PENTA KILL", color = Color3.fromRGB(220, 70, 220) },
+	{ count = 6, name = "GODLIKE", color = Color3.fromRGB(120, 220, 255) },
+}
+
 -- Lobby + queue tuning
 Config.Lobby = {
 	-- Sky lobby — high enough to see all worlds at y=0 below, like Natural Disasters

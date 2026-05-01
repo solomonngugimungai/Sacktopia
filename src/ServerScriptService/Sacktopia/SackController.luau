@@ -422,6 +422,15 @@ function SackController:_eliminate(player: Player?, reason: string)
 				displayName = player.DisplayName,
 				reason = reason,
 			})
+			-- killfeed: lastDeflector (if any) "killed" the victim by deflecting the sack at them
+			local eliminator = self.lastDeflector
+			Remotes.KillFeed:FireAllClients({
+				eliminator = eliminator and eliminator.UserId or 0,
+				eliminatorName = eliminator and eliminator.DisplayName or nil,
+				victim = player.UserId,
+				victimName = player.DisplayName,
+				reason = reason, -- "missed" (sack hit) or "ground" (drop)
+			})
 		end
 	end
 

@@ -24,6 +24,8 @@ function MatchController.new(world: World, roster: { Player })
 	self.startedAt = 0
 	self.onEndedCallback = nil :: ((survivors: { Player }) -> ())?
 	self._connections = {} :: { RBXScriptConnection }
+	-- per-player consecutive elimination count this match (for streak announcements)
+	self.streaks = {} :: { [Player]: number }
 	return self
 end
 
@@ -64,6 +66,29 @@ function MatchController:_recordKnockout(player: Player)
 		end
 	end
 	table.insert(self.knockoutOrder, player)
+	-- streak tracking: the sack's lastDeflector (set on its previous deflect) is the killer
+	if not self.sack then
+		return
+	end
+	local killer = self.sack.lastDeflector
+	if not killer or killer == player then
+		return -- self-drop / no killer
+	end
+	self.streaks[killer] = (self.streaks[killer] or 0) + 1
+	-- victim's own streak resets — they got eliminated
+	self.streaks[player] = 0
+	local n = self.streaks[killer]
+	for _, tier in Config.Streaks do
+		if tier.count == n then
+			Remotes.StreakAlert:FireAllClients({
+				playerName = killer.DisplayName,
+				streakName = tier.name,
+				count = n,
+				color = tier.color,
+			})
+			break
+		end
+	end
 end
 
 -- hook each roster player's Humanoid.Died so any death (sack hit, void fall, fell off

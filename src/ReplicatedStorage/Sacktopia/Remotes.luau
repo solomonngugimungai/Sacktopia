@@ -60,6 +60,14 @@ local Remotes = {
 	DropAlert = getOrCreate(root, "RemoteEvent", "DropAlert") :: RemoteEvent,
 	-- server → owning client: practice mode stats snapshot {deflects, drops, currentCombo, maxCombo, sessionActive}
 	PracticeStats = getOrCreate(root, "RemoteEvent", "PracticeStats") :: RemoteEvent,
+	-- client → server: dash request, payload = direction Vector3 (camera lookVector horizontal)
+	DashRequest = getOrCreate(root, "RemoteEvent", "DashRequest") :: RemoteEvent,
+	-- server → owning client: dash succeeded; payload = cooldown seconds for the HUD
+	DashAck = getOrCreate(root, "RemoteEvent", "DashAck") :: RemoteEvent,
+	-- server → all: kill feed entry {eliminator?, eliminatorName?, victim, victimName, reason}
+	KillFeed = getOrCreate(root, "RemoteEvent", "KillFeed") :: RemoteEvent,
+	-- server → all: streak announcement {playerName, streakName, count}
+	StreakAlert = getOrCreate(root, "RemoteEvent", "StreakAlert") :: RemoteEvent,
 }
 
 return Remotes
