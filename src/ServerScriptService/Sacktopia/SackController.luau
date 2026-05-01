@@ -201,6 +201,8 @@ function SackController:_pickInitialTarget()
 end
 
 function SackController:start()
+	print(string.format("[Sacktopia] SackController:start practiceMode=%s rosterCount=%d",
+		tostring(self.practiceMode), #self.roster))
 	-- Practice mode: spawn the sack directly above the practice player and just let it
 	-- fall straight down — pure vertical from the start.
 	if self.practiceMode and self.roster[1] then
@@ -209,6 +211,8 @@ function SackController:start()
 		if root then
 			self.position = Vector3.new(root.Position.X, root.Position.Y + self.arena.sackSpawnHeight, root.Position.Z)
 			self.part.Position = self.position
+		else
+			print(string.format("[Sacktopia] WARN no characterRoot for %s in practice start", p.Name))
 		end
 		self.velocity = Vector3.new(0, 0, 0) -- gravity will start pulling it down
 		self._heartbeatConn = RunService.Heartbeat:Connect(function(dt)

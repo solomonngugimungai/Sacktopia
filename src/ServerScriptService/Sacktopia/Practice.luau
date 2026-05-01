@@ -42,10 +42,14 @@ function Practice.isInSession(player: Player): boolean
 end
 
 function Practice.startSession(player: Player, world: World)
+	print(string.format("[Sacktopia] startSession requested by %s, world.id=%s, isPractice=%s",
+		player.Name, world.id, tostring(world.isPractice)))
 	if not world.isPractice then
+		print("[Sacktopia] startSession rejected: world is not Practice")
 		return
 	end
 	if sessions[player] then
+		print("[Sacktopia] startSession rejected: already in a session")
 		return -- already in a session
 	end
 	-- mark them alive in their personal practice "match" so SackController targets them
@@ -75,6 +79,7 @@ function Practice.startSession(player: Player, world: World)
 	sack:start()
 	session.sack = sack
 	fireStats(session, true)
+	print(string.format("[Sacktopia] startSession SUCCESS for %s", player.Name))
 end
 
 function Practice.endSession(player: Player)

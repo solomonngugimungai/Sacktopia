@@ -272,13 +272,15 @@ end
 
 local function bindQueuePadTouch(worldId: string, pad: BasePart)
 	local world = Worlds.byId(worldId)
+	print(string.format("[Sacktopia] bound pad for world=%s, isPractice=%s", worldId, tostring(world and world.isPractice)))
 	pad.Touched:Connect(function(hit: BasePart)
 		local player = resolveTouchedPlayer(hit, 0.4)
 		if not player then
 			return
 		end
+		print(string.format("[Sacktopia] pad TOUCHED in world=%s by %s (isPractice=%s)",
+			worldId, player.Name, tostring(world and world.isPractice)))
 		if world and world.isPractice then
-			-- yellow START PRACTICE pad: spin up a personal sack for this player
 			Practice.startSession(player, world)
 		else
 			joinQueue(player, worldId)
