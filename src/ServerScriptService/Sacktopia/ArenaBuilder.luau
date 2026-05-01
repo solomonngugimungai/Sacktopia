@@ -662,6 +662,143 @@ local function buildBackyard(folder: Folder, world: Worlds.World)
 		})
 		leg.Parent = folder
 	end
+
+	-- BACKYARD FLOURISHES --
+
+	-- swing set: 2 vertical posts + horizontal beam + 2 swings
+	local swingPos = world.center + Vector3.new(-26, 0, 0)
+	for _, side in { -1, 1 } do
+		local post = part({
+			Name = "SwingPost",
+			Size = Vector3.new(0.6, 12, 0.6),
+			CFrame = CFrame.new(swingPos + Vector3.new(0, 6, side * 4)) * CFrame.Angles(0, 0, math.rad(side * 8)),
+			Color = Color3.fromRGB(180, 180, 180),
+			Material = Enum.Material.Metal,
+		})
+		post.Parent = folder
+	end
+	local beam = part({
+		Name = "SwingBeam",
+		Size = Vector3.new(0.7, 0.7, 9),
+		CFrame = CFrame.new(swingPos + Vector3.new(0, 11.5, 0)),
+		Color = Color3.fromRGB(180, 180, 180),
+		Material = Enum.Material.Metal,
+	})
+	beam.Parent = folder
+	for _, sign in { -1, 1 } do
+		-- chains
+		for _, dz in { -0.7, 0.7 } do
+			local chain = part({
+				Name = "SwingChain",
+				Size = Vector3.new(0.15, 5, 0.15),
+				CFrame = CFrame.new(swingPos + Vector3.new(0, 8.5, sign * 1.6 + dz)),
+				Color = Color3.fromRGB(120, 120, 120),
+				Material = Enum.Material.Metal,
+				CanCollide = false,
+			})
+			chain.Parent = folder
+		end
+		-- seat
+		local seat = part({
+			Name = "SwingSeat",
+			Size = Vector3.new(2.4, 0.3, 1.4),
+			CFrame = CFrame.new(swingPos + Vector3.new(0, 6, sign * 1.6)),
+			Color = Color3.fromRGB(80, 50, 30),
+			Material = Enum.Material.Wood,
+		})
+		seat.Parent = folder
+	end
+
+	-- mailbox at perimeter
+	local mailPos = world.center + Vector3.new(world.platformRadius + 12, 0, -10)
+	local mailPost = part({
+		Name = "MailboxPost",
+		Size = Vector3.new(0.4, 6, 0.4),
+		CFrame = CFrame.new(mailPos + Vector3.new(0, 3, 0)),
+		Color = Color3.fromRGB(80, 50, 30),
+		Material = Enum.Material.Wood,
+	})
+	mailPost.Parent = folder
+	local box = part({
+		Name = "MailboxBody",
+		Size = Vector3.new(2.8, 1.8, 2),
+		CFrame = CFrame.new(mailPos + Vector3.new(0, 6.8, 0)),
+		Color = Color3.fromRGB(120, 30, 30),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	box.Parent = folder
+	local flag = part({
+		Name = "MailboxFlag",
+		Size = Vector3.new(0.2, 1.2, 0.8),
+		CFrame = CFrame.new(mailPos + Vector3.new(1.6, 7.5, 0)),
+		Color = Color3.fromRGB(220, 30, 30),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	flag.Parent = folder
+
+	-- 2 lawn chairs near the pool (the pool is at +Z 12 in this arena)
+	for _, sign in { -1, 1 } do
+		local chairPos = world.center + Vector3.new(sign * 12, 0, 24)
+		local seat = part({
+			Name = "LawnChairSeat",
+			Size = Vector3.new(3, 0.4, 3),
+			CFrame = CFrame.new(chairPos + Vector3.new(0, 1.5, 0)),
+			Color = Color3.fromRGB(220, 240, 220),
+			Material = Enum.Material.Fabric,
+		})
+		seat.Parent = folder
+		local back = part({
+			Name = "LawnChairBack",
+			Size = Vector3.new(3, 4, 0.4),
+			CFrame = CFrame.new(chairPos + Vector3.new(0, 3, -1.3)) * CFrame.Angles(math.rad(15), 0, 0),
+			Color = Color3.fromRGB(220, 240, 220),
+			Material = Enum.Material.Fabric,
+		})
+		back.Parent = folder
+	end
+
+	-- two garden gnomes at perimeter spots not already occupied by flamingos
+	for _, ang in { math.rad(50), math.rad(220) } do
+		local r = world.platformRadius - 6
+		local pos = world.center + Vector3.new(math.cos(ang) * r, 0, math.sin(ang) * r)
+		local body = part({
+			Name = "GnomeBody",
+			Shape = Enum.PartType.Cylinder,
+			Size = Vector3.new(2.8, 1.8, 1.8),
+			CFrame = CFrame.new(pos + Vector3.new(0, 1.4, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+			Color = Color3.fromRGB(220, 60, 60),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		body.Parent = folder
+		local gnomeHead = part({
+			Name = "GnomeHead",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(1.4, 1.4, 1.4),
+			CFrame = CFrame.new(pos + Vector3.new(0, 3.2, 0)),
+			Color = Color3.fromRGB(255, 220, 190),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		gnomeHead.Parent = folder
+		-- pointy hat
+		local hat = part({
+			Name = "GnomeHat",
+			Size = Vector3.new(1.6, 2.2, 1.6),
+			CFrame = CFrame.new(pos + Vector3.new(0, 4.6, 0)) * CFrame.Angles(0, 0, math.rad(45)),
+			Color = Color3.fromRGB(220, 60, 60),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		hat.Parent = folder
+		-- white beard suggestion
+		local beard = part({
+			Name = "GnomeBeard",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(1.2, 1.0, 0.6),
+			CFrame = CFrame.new(pos + Vector3.new(0, 2.6, 0.5)),
+			Color = Color3.fromRGB(245, 245, 245),
+			Material = Enum.Material.SmoothPlastic,
+		})
+		beard.Parent = folder
+	end
 end
 
 local function buildQuad(folder: Folder, world: Worlds.World)
@@ -804,6 +941,166 @@ local function buildQuad(folder: Folder, world: Worlds.World)
 		lampLight.Brightness = 1.6
 		lampLight.Range = 18
 		lampLight.Parent = lampHead
+	end
+
+	-- ROYAL HIGH / IVY LEAGUE FLOURISHES --
+
+	-- 1) Clock tower in the distance behind the platform (-X)
+	local towerBase = world.center + Vector3.new(-(world.platformRadius + 60), 0, 0)
+	local tower = part({
+		Name = "ClockTower",
+		Size = Vector3.new(14, 80, 14),
+		CFrame = CFrame.new(towerBase + Vector3.new(0, 40, 0)),
+		Color = Color3.fromRGB(170, 130, 100),
+		Material = Enum.Material.Brick,
+	})
+	tower.Parent = folder
+	-- pyramid roof on tower (block angled)
+	local towerRoof = part({
+		Name = "ClockTowerRoof",
+		Size = Vector3.new(18, 12, 18),
+		CFrame = CFrame.new(towerBase + Vector3.new(0, 86, 0)) * CFrame.Angles(0, math.rad(45), 0),
+		Color = Color3.fromRGB(60, 40, 30),
+		Material = Enum.Material.Slate,
+	})
+	towerRoof.Parent = folder
+	-- clock face on the +X side (facing the arena)
+	local clockFace = part({
+		Name = "ClockFace",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.6, 8, 8),
+		CFrame = CFrame.new(towerBase + Vector3.new(7.2, 60, 0)) * CFrame.Angles(0, 0, 0),
+		Color = Color3.fromRGB(245, 240, 220),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	clockFace.Parent = folder
+	billboard(clockFace, "10:10", Color3.fromRGB(40, 30, 20), Vector2.new(7, 3.5), 0)
+	local clockGlow = Instance.new("PointLight")
+	clockGlow.Color = Color3.fromRGB(255, 240, 200)
+	clockGlow.Brightness = 1.5
+	clockGlow.Range = 20
+	clockGlow.Parent = clockFace
+
+	-- 2) Welcome arch at +X edge of the platform (entry gateway)
+	local archCenter = world.center + Vector3.new(world.platformRadius + 6, 0, 0)
+	for _, side in { -1, 1 } do
+		local pillar = part({
+			Name = "ArchPillar",
+			Size = Vector3.new(2.5, 18, 2.5),
+			CFrame = CFrame.new(archCenter + Vector3.new(0, 9, side * 6)),
+			Color = Color3.fromRGB(220, 210, 190),
+			Material = Enum.Material.Marble,
+		})
+		pillar.Parent = folder
+		-- gold pillar cap
+		local cap = part({
+			Name = "ArchPillarCap",
+			Size = Vector3.new(3.5, 1, 3.5),
+			CFrame = CFrame.new(archCenter + Vector3.new(0, 18.5, side * 6)),
+			Color = Color3.fromRGB(245, 200, 80),
+			Material = Enum.Material.Foil,
+		})
+		cap.Parent = folder
+	end
+	local archTop = part({
+		Name = "ArchTop",
+		Size = Vector3.new(3, 2.5, 14.5),
+		CFrame = CFrame.new(archCenter + Vector3.new(0, 20.5, 0)),
+		Color = Color3.fromRGB(220, 210, 190),
+		Material = Enum.Material.Marble,
+	})
+	archTop.Parent = folder
+	billboard(archTop, "THE QUAD", Color3.fromRGB(245, 200, 80), Vector2.new(14, 3.2), 3)
+
+	-- 3) Hanging banner flags between the brick campus pillars (alternating school colors)
+	for i = 1, 4 do
+		local ang = (i - 1) * math.pi / 2 -- aligns with the brick pillars at cardinal points
+		local r = world.platformRadius + 8
+		local pos = world.center + Vector3.new(math.cos(ang) * r, 12, math.sin(ang) * r)
+		local color = (i % 2 == 0) and Color3.fromRGB(60, 90, 170) or Color3.fromRGB(245, 200, 80)
+		local flagAtt1 = pos + Vector3.new(0, 4, 0)
+		local flag = part({
+			Name = "Banner",
+			Size = Vector3.new(0.3, 8, 4),
+			CFrame = CFrame.new(flagAtt1 - Vector3.new(0, 4, 0)),
+			Color = color,
+			Material = Enum.Material.Fabric,
+			CanCollide = false,
+		})
+		flag.Parent = folder
+		-- white trim
+		local trim = part({
+			Name = "BannerTrim",
+			Size = Vector3.new(0.4, 0.4, 4.2),
+			CFrame = CFrame.new(flagAtt1 - Vector3.new(0, 8, 0)),
+			Color = Color3.fromRGB(245, 245, 245),
+			Material = Enum.Material.Fabric,
+			CanCollide = false,
+		})
+		trim.Parent = folder
+	end
+
+	-- 4) "Founder" statue on a marble pedestal in one quadrant
+	local statuePos = world.center + Vector3.new(world.platformRadius - 22, 0, world.platformRadius - 22)
+	local pedestal = part({
+		Name = "StatuePedestal",
+		Size = Vector3.new(5, 4, 5),
+		CFrame = CFrame.new(statuePos + Vector3.new(0, 2, 0)),
+		Color = Color3.fromRGB(220, 210, 190),
+		Material = Enum.Material.Marble,
+	})
+	pedestal.Parent = folder
+	-- humanoid silhouette: torso + head + 2 arms
+	local statueColor = Color3.fromRGB(180, 180, 180)
+	local torso = part({
+		Name = "StatueTorso",
+		Size = Vector3.new(2.8, 5, 1.8),
+		CFrame = CFrame.new(statuePos + Vector3.new(0, 6.5, 0)),
+		Color = statueColor,
+		Material = Enum.Material.Marble,
+	})
+	torso.Parent = folder
+	local head = part({
+		Name = "StatueHead",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(1.8, 1.8, 1.8),
+		CFrame = CFrame.new(statuePos + Vector3.new(0, 10, 0)),
+		Color = statueColor,
+		Material = Enum.Material.Marble,
+	})
+	head.Parent = folder
+	local arm = part({
+		Name = "StatueArm",
+		Size = Vector3.new(1, 4.2, 1),
+		CFrame = CFrame.new(statuePos + Vector3.new(2.3, 6, 0)) * CFrame.Angles(0, 0, math.rad(20)),
+		Color = statueColor,
+		Material = Enum.Material.Marble,
+	})
+	arm.Parent = folder
+	local plaque = part({
+		Name = "StatuePlaque",
+		Size = Vector3.new(2.6, 0.5, 4.6),
+		CFrame = CFrame.new(statuePos + Vector3.new(0, 4.3, 0)),
+		Color = Color3.fromRGB(245, 200, 80),
+		Material = Enum.Material.Foil,
+	})
+	plaque.Parent = folder
+
+	-- 5) Cobblestone walkway pavers across the platform (subtle X-pattern in the floor)
+	local platformTopY = world.center.Y + Config.ArenaDefaults.PlatformThickness / 2
+	for i = 1, 2 do
+		local ang = (i - 1) * math.pi / 2 + math.pi / 4
+		local len = (world.platformRadius - 8) * 2
+		local stripe = part({
+			Name = "WalkwayPaver",
+			Size = Vector3.new(len, 0.18, 4),
+			CFrame = CFrame.new(world.center + Vector3.new(0, platformTopY - world.center.Y + 0.05, 0))
+				* CFrame.Angles(0, -ang, 0),
+			Color = Color3.fromRGB(200, 190, 170),
+			Material = Enum.Material.Cobblestone,
+			CanCollide = false,
+		})
+		stripe.Parent = folder
 	end
 end
 
@@ -997,6 +1294,103 @@ local function buildFratHouse(folder: Folder, world: Worlds.World)
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	smoke.Parent = smokeAttach
+
+	-- FRAT HOUSE FLOURISHES --
+
+	-- big neon Greek-letter sign hovering above the +Z perimeter (above the porch line)
+	-- using simple part shapes so we don't depend on TextLabel readability from far away
+	local signCenter = world.center + Vector3.new(0, 24, world.platformRadius - 8)
+	-- a backing plate
+	local signPlate = part({
+		Name = "GreekSignPlate",
+		Size = Vector3.new(20, 6, 0.6),
+		CFrame = CFrame.new(signCenter),
+		Color = Color3.fromRGB(20, 15, 12),
+		Material = Enum.Material.SmoothPlastic,
+	})
+	signPlate.Parent = folder
+	-- glowing letters via billboard
+	billboard(signPlate, "ΣΑΘ", Color3.fromRGB(255, 80, 80), Vector2.new(14, 5), 0)
+	-- string lights bordering the sign
+	local lightCount = 18
+	for i = 1, lightCount do
+		local x = (i - (lightCount + 1) / 2) * 1.2
+		local color = (i % 2 == 0) and Color3.fromRGB(255, 80, 80) or Color3.fromRGB(255, 200, 100)
+		local bulb = part({
+			Name = "SignBulb",
+			Shape = Enum.PartType.Ball,
+			Size = Vector3.new(0.6, 0.6, 0.6),
+			CFrame = CFrame.new(signCenter + Vector3.new(x, 3.4, 0)),
+			Color = color,
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+		})
+		bulb.Parent = folder
+	end
+
+	-- keg in the corner of the platform
+	local kegPos = world.center + Vector3.new(world.platformRadius - 14, 0, world.platformRadius - 14)
+	local kegBody = part({
+		Name = "KegBody",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(5.2, 4, 4),
+		CFrame = CFrame.new(kegPos + Vector3.new(0, 2.6, 0)),
+		Color = Color3.fromRGB(180, 180, 195),
+		Material = Enum.Material.Metal,
+	})
+	kegBody.Parent = folder
+	local kegTop = part({
+		Name = "KegTop",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(0.4, 4.2, 4.2),
+		CFrame = CFrame.new(kegPos + Vector3.new(0, 5.1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(140, 140, 160),
+		Material = Enum.Material.Metal,
+	})
+	kegTop.Parent = folder
+	local tap = part({
+		Name = "KegTap",
+		Size = Vector3.new(0.6, 0.6, 1.6),
+		CFrame = CFrame.new(kegPos + Vector3.new(2.6, 4.5, 0)),
+		Color = Color3.fromRGB(80, 80, 80),
+		Material = Enum.Material.Metal,
+	})
+	tap.Parent = folder
+
+	-- disco ball hanging from above (mid-air centerpiece)
+	local ballPos = world.center + Vector3.new(0, 22, 0)
+	local discoBall = part({
+		Name = "DiscoBall",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(4, 4, 4),
+		CFrame = CFrame.new(ballPos),
+		Color = Color3.fromRGB(220, 220, 240),
+		Material = Enum.Material.Foil,
+		CanCollide = false,
+	})
+	discoBall.Parent = folder
+	local hangCord = part({
+		Name = "DiscoHang",
+		Size = Vector3.new(0.2, 6, 0.2),
+		CFrame = CFrame.new(ballPos + Vector3.new(0, 5, 0)),
+		Color = Color3.fromRGB(40, 40, 40),
+		Material = Enum.Material.Metal,
+		CanCollide = false,
+	})
+	hangCord.Parent = folder
+	-- pulsing color light
+	local discoLight = Instance.new("PointLight")
+	discoLight.Color = Color3.fromRGB(220, 100, 220)
+	discoLight.Brightness = 2
+	discoLight.Range = 30
+	discoLight.Parent = discoBall
+	-- spinning effect
+	local discoTween = TweenService:Create(
+		discoBall,
+		TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
+		{ CFrame = CFrame.new(ballPos) * CFrame.Angles(0, math.pi * 2, 0) }
+	)
+	discoTween:Play()
 end
 
 local function buildStadium(folder: Folder, world: Worlds.World)
@@ -1149,6 +1543,65 @@ local function buildStadium(folder: Folder, world: Worlds.World)
 		})
 		benchBack.Parent = folder
 	end
+
+	-- STADIUM FLOURISHES --
+
+	-- jumbotron mounted high opposite the scoreboard (+Z side)
+	local jumboPos = world.center + Vector3.new(0, 38, world.platformRadius + 24)
+	local jumboFrame = part({
+		Name = "JumbotronFrame",
+		Size = Vector3.new(50, 22, 2),
+		CFrame = CFrame.new(jumboPos),
+		Color = Color3.fromRGB(20, 20, 30),
+		Material = Enum.Material.Metal,
+	})
+	jumboFrame.Parent = folder
+	local jumboScreen = part({
+		Name = "JumbotronScreen",
+		Size = Vector3.new(46, 18, 0.6),
+		CFrame = CFrame.new(jumboPos + Vector3.new(0, 0, -1.2)),
+		Color = Color3.fromRGB(255, 255, 255),
+		Material = Enum.Material.Neon,
+		Transparency = 0.05,
+	})
+	jumboScreen.Parent = folder
+	billboard(jumboScreen, "🏈 SACKTOPIA 🏈\nLIVE", Color3.fromRGB(255, 220, 80), Vector2.new(36, 14), 0)
+	-- 4 support struts holding the jumbotron up
+	for _, sx in { -1, 1 } do
+		local strut = part({
+			Name = "JumbotronStrut",
+			Size = Vector3.new(1.5, 38, 1.5),
+			CFrame = CFrame.new(jumboPos + Vector3.new(sx * 22, -19, 0)),
+			Color = Color3.fromRGB(40, 40, 60),
+			Material = Enum.Material.Metal,
+		})
+		strut.Parent = folder
+	end
+
+	-- 6 hanging team flags around the perimeter (red + blue alternating)
+	for i = 1, 6 do
+		local ang = (i - 1) / 6 * math.pi * 2 + math.pi / 12
+		local r = world.platformRadius + 18
+		local pos = world.center + Vector3.new(math.cos(ang) * r, 26, math.sin(ang) * r)
+		local color = (i % 2 == 0) and Color3.fromRGB(50, 90, 200) or Color3.fromRGB(220, 50, 50)
+		local pole = part({
+			Name = "FlagPole",
+			Size = Vector3.new(0.4, 16, 0.4),
+			CFrame = CFrame.new(pos + Vector3.new(0, -8, 0)),
+			Color = Color3.fromRGB(150, 150, 160),
+			Material = Enum.Material.Metal,
+		})
+		pole.Parent = folder
+		local fabric = part({
+			Name = "FlagFabric",
+			Size = Vector3.new(0.2, 5, 7),
+			CFrame = CFrame.new(pos + Vector3.new(0, -2, 3.5)) * CFrame.Angles(0, -ang, 0),
+			Color = color,
+			Material = Enum.Material.Fabric,
+			CanCollide = false,
+		})
+		fabric.Parent = folder
+	end
 end
 
 local function buildOlympus(folder: Folder, world: Worlds.World)
@@ -1296,6 +1749,112 @@ local function buildOlympus(folder: Folder, world: Worlds.World)
 		})
 		strip.Parent = folder
 	end
+
+	-- OLYMPUS FLOURISHES --
+
+	-- pegasus statue on a tall pedestal opposite the altar (-Z)
+	local pegPos = world.center + Vector3.new(0, 0, -22)
+	local pegPedestal = part({
+		Name = "PegasusPedestal",
+		Size = Vector3.new(7, 6, 7),
+		CFrame = CFrame.new(pegPos + Vector3.new(0, 3, 0)),
+		Color = Color3.fromRGB(245, 245, 250),
+		Material = Enum.Material.Marble,
+	})
+	pegPedestal.Parent = folder
+	-- horse body
+	local pegBody = part({
+		Name = "PegasusBody",
+		Size = Vector3.new(2.4, 3, 6),
+		CFrame = CFrame.new(pegPos + Vector3.new(0, 8, 0)),
+		Color = Color3.fromRGB(245, 245, 250),
+		Material = Enum.Material.Marble,
+	})
+	pegBody.Parent = folder
+	-- 4 legs
+	for _, dx in { -1, 1 } do
+		for _, dz in { -1.8, 1.8 } do
+			local leg = part({
+				Name = "PegasusLeg",
+				Size = Vector3.new(0.7, 3, 0.7),
+				CFrame = CFrame.new(pegPos + Vector3.new(dx, 5, dz)),
+				Color = Color3.fromRGB(245, 245, 250),
+				Material = Enum.Material.Marble,
+			})
+			leg.Parent = folder
+		end
+	end
+	-- neck + head
+	local pegNeck = part({
+		Name = "PegasusNeck",
+		Size = Vector3.new(1.5, 3.2, 1.5),
+		CFrame = CFrame.new(pegPos + Vector3.new(0, 10.2, 2.4)) * CFrame.Angles(math.rad(-30), 0, 0),
+		Color = Color3.fromRGB(245, 245, 250),
+		Material = Enum.Material.Marble,
+	})
+	pegNeck.Parent = folder
+	local pegHead = part({
+		Name = "PegasusHead",
+		Size = Vector3.new(1.5, 1.6, 2.6),
+		CFrame = CFrame.new(pegPos + Vector3.new(0, 11.5, 3.6)) * CFrame.Angles(math.rad(-15), 0, 0),
+		Color = Color3.fromRGB(245, 245, 250),
+		Material = Enum.Material.Marble,
+	})
+	pegHead.Parent = folder
+	-- wings (gold-trimmed)
+	for _, side in { -1, 1 } do
+		local wing = part({
+			Name = "PegasusWing",
+			Size = Vector3.new(0.4, 5, 4),
+			CFrame = CFrame.new(pegPos + Vector3.new(side * 1.6, 10, 0)) * CFrame.Angles(math.rad(-20), 0, math.rad(side * 30)),
+			Color = Color3.fromRGB(245, 200, 80),
+			Material = Enum.Material.Foil,
+			CanCollide = false,
+		})
+		wing.Parent = folder
+	end
+
+	-- 3 floating gold rings around the arena (slowly rotating decorative tori suggested by torus-flat parts)
+	for i = 1, 3 do
+		local angle = (i - 1) / 3 * math.pi * 2
+		local ringHeight = 18 + i * 6
+		local ringPos = world.center + Vector3.new(math.cos(angle) * 14, ringHeight, math.sin(angle) * 14)
+		-- 12 small gold blocks arranged in a circle to suggest a ring
+		local segments = 12
+		local ringRadius = 4
+		for s = 1, segments do
+			local a = (s - 1) / segments * math.pi * 2
+			local segPos = ringPos + Vector3.new(math.cos(a) * ringRadius, 0, math.sin(a) * ringRadius)
+			local seg = part({
+				Name = "GoldRingSeg",
+				Size = Vector3.new(0.6, 0.6, 1.4),
+				CFrame = CFrame.new(segPos) * CFrame.Angles(0, -a, 0),
+				Color = Color3.fromRGB(245, 200, 80),
+				Material = Enum.Material.Foil,
+				CanCollide = false,
+			})
+			seg.Parent = folder
+		end
+	end
+
+	-- lightning bolt of light shooting up from the altar (the eternal flame already exists at world.center +Z 18)
+	local boltCenter = world.center + Vector3.new(0, 30, 18)
+	local bolt = part({
+		Name = "ZeusBolt",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(40, 1.4, 1.4),
+		CFrame = CFrame.new(boltCenter) * CFrame.Angles(0, 0, math.rad(85)),
+		Color = Color3.fromRGB(255, 255, 200),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+		Transparency = 0.2,
+	})
+	bolt.Parent = folder
+	local boltGlow = Instance.new("PointLight")
+	boltGlow.Color = Color3.fromRGB(255, 240, 200)
+	boltGlow.Brightness = 4
+	boltGlow.Range = 30
+	boltGlow.Parent = bolt
 end
 
 local themeBuilders: { [string]: (Folder, Worlds.World) -> () } = {
