@@ -35,21 +35,28 @@ local function isEligible(save: PlayerData.Save): boolean
 	return (os.time() - save.lastDailyClaimAt) >= CLAIM_COOLDOWN_SECONDS
 end
 
-local function offerToClient(player: Player, save: PlayerData.Save)
-	if not isEligible(save) then
-		return
+local function offerToClient(player: Player, save: PlayerData.Save, requestedManually: boolean?)
+	if isEligible(save) then
+		local day = streakDayFromSave(save)
+		local reward = Config.DailyRewards[day]
+		if not reward then
+			return
+		end
+		Remotes.DailyRewardOffer:FireClient(player, {
+			available = true,
+			day = day,
+			coins = reward.coins,
+			item = reward.item,
+			skin = reward.skin,
+		})
+	elseif requestedManually then
+		-- player clicked the DAILY button but it's not ready yet — show a countdown
+		Remotes.DailyRewardOffer:FireClient(player, {
+			available = false,
+			nextAvailableAt = save.lastDailyClaimAt + CLAIM_COOLDOWN_SECONDS,
+			currentStreak = save.dailyStreak,
+		})
 	end
-	local day = streakDayFromSave(save)
-	local reward = Config.DailyRewards[day]
-	if not reward then
-		return
-	end
-	Remotes.DailyRewardOffer:FireClient(player, {
-		day = day,
-		coins = reward.coins,
-		item = reward.item,
-		skin = reward.skin,
-	})
 end
 
 local function claim(player: Player)
@@ -118,6 +125,14 @@ function DailyRewards.start()
 
 	Remotes.DailyRewardClaim.OnServerEvent:Connect(function(player: Player)
 		claim(player)
+	end)
+
+	Remotes.DailyRewardRequest.OnServerEvent:Connect(function(player: Player)
+		local save = PlayerData.get(player)
+		if not save then
+			return
+		end
+		offerToClient(player, save, true)
 	end)
 
 	Remotes.TutorialAck.OnServerEvent:Connect(function(player: Player)

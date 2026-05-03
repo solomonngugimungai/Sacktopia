@@ -23,7 +23,17 @@ local function rewardSummary(payload: { day: number, coins: number, item: string
 	return table.concat(lines, "\n")
 end
 
-local function show(payload: { day: number, coins: number, item: string?, skin: string? })
+local function formatCountdown(secondsLeft: number): string
+	secondsLeft = math.max(secondsLeft, 0)
+	local hours = math.floor(secondsLeft / 3600)
+	local minutes = math.floor((secondsLeft % 3600) / 60)
+	if hours > 0 then
+		return string.format("%dh %dm", hours, minutes)
+	end
+	return string.format("%dm", minutes)
+end
+
+local function show(payload: any)
 	local pg = player:WaitForChild("PlayerGui")
 	-- defer if the tutorial is currently up — wait for it to close
 	local tutorial = pg:FindFirstChild("SacktopiaTutorial")
@@ -74,15 +84,14 @@ local function show(payload: { day: number, coins: number, item: string?, skin: 
 	title.Text = "DAILY REWARD"
 	title.Parent = card
 
-	local day = Instance.new("TextLabel")
-	day.Position = UDim2.fromOffset(0, 36)
-	day.Size = UDim2.new(1, 0, 0, 22)
-	day.BackgroundTransparency = 1
-	day.Font = Enum.Font.GothamBold
-	day.TextScaled = true
-	day.TextColor3 = Color3.fromRGB(255, 255, 255)
-	day.Text = string.format("Day %d of 7", payload.day)
-	day.Parent = card
+	local subline = Instance.new("TextLabel")
+	subline.Position = UDim2.fromOffset(0, 36)
+	subline.Size = UDim2.new(1, 0, 0, 22)
+	subline.BackgroundTransparency = 1
+	subline.Font = Enum.Font.GothamBold
+	subline.TextScaled = true
+	subline.TextColor3 = Color3.fromRGB(255, 255, 255)
+	subline.Parent = card
 
 	local content = Instance.new("TextLabel")
 	content.Position = UDim2.fromOffset(0, 80)
@@ -93,34 +102,61 @@ local function show(payload: { day: number, coins: number, item: string?, skin: 
 	content.TextColor3 = Color3.fromRGB(245, 245, 245)
 	content.TextStrokeTransparency = 0.4
 	content.TextWrapped = true
-	content.Text = rewardSummary(payload)
 	content.Parent = card
 
 	local button = Instance.new("TextButton")
 	button.AnchorPoint = Vector2.new(0.5, 1)
 	button.Position = UDim2.new(0.5, 0, 1, 0)
 	button.Size = UDim2.fromOffset(180, 48)
-	button.BackgroundColor3 = Color3.fromRGB(120, 220, 255)
 	button.BorderSizePixel = 0
 	button.Font = Enum.Font.GothamBlack
 	button.TextScaled = true
 	button.TextColor3 = Color3.fromRGB(20, 18, 28)
-	button.Text = "CLAIM"
 	local btnCorner = Instance.new("UICorner")
 	btnCorner.CornerRadius = UDim.new(0, 10)
 	btnCorner.Parent = button
 	button.Parent = card
 
-	button.MouseButton1Click:Connect(function()
-		Remotes.DailyRewardClaim:FireServer()
-		button.Text = "CLAIMED ✓"
-		button.BackgroundColor3 = Color3.fromRGB(80, 180, 100)
-		task.delay(1, function()
+	if payload.available then
+		subline.Text = string.format("Day %d of 7", payload.day)
+		content.Text = rewardSummary(payload)
+		button.Text = "CLAIM"
+		button.BackgroundColor3 = Color3.fromRGB(120, 220, 255)
+		button.MouseButton1Click:Connect(function()
+			Remotes.DailyRewardClaim:FireServer()
+			button.Text = "CLAIMED ✓"
+			button.BackgroundColor3 = Color3.fromRGB(80, 180, 100)
+			task.delay(1, function()
+				if gui.Parent then
+					gui:Destroy()
+				end
+			end)
+		end)
+	else
+		-- not eligible yet — show countdown
+		subline.Text = string.format("Streak: Day %d / 7", payload.currentStreak or 0)
+		button.Text = "CLOSE"
+		button.BackgroundColor3 = Color3.fromRGB(110, 110, 130)
+		button.MouseButton1Click:Connect(function()
 			if gui.Parent then
 				gui:Destroy()
 			end
 		end)
-	end)
+		-- live countdown text
+		local function updateCountdown()
+			local secondsLeft = (payload.nextAvailableAt or 0) - os.time()
+			content.Text = string.format("Next reward in\n%s", formatCountdown(secondsLeft))
+		end
+		updateCountdown()
+		task.spawn(function()
+			while gui.Parent do
+				task.wait(30) -- refresh every 30s
+				if gui.Parent then
+					updateCountdown()
+				end
+			end
+		end)
+	end
 
 	card.Size = UDim2.fromOffset(0, 0)
 	TweenService:Create(

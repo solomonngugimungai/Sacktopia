@@ -78,6 +78,8 @@ local Remotes = {
 	DailyRewardOffer = getOrCreate(root, "RemoteEvent", "DailyRewardOffer") :: RemoteEvent,
 	-- client → server: the player clicked Claim
 	DailyRewardClaim = getOrCreate(root, "RemoteEvent", "DailyRewardClaim") :: RemoteEvent,
+	-- client → server: re-open the daily reward popup (player clicked DAILY button)
+	DailyRewardRequest = getOrCreate(root, "RemoteEvent", "DailyRewardRequest") :: RemoteEvent,
 }
 
 return Remotes

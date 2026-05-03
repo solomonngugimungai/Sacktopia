@@ -23,6 +23,7 @@ local Sounds = require(script:WaitForChild("Sounds"))
 local Music = require(script:WaitForChild("Music"))
 local TutorialHUD = require(script:WaitForChild("TutorialHUD"))
 local DailyRewardHUD = require(script:WaitForChild("DailyRewardHUD"))
+local DailyButton = require(script:WaitForChild("DailyButton"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -134,4 +135,5 @@ Sounds.start()
 Music.start()
 TutorialHUD.start()
 DailyRewardHUD.start()
+DailyButton.start()
 print("[Sacktopia] client boot")
