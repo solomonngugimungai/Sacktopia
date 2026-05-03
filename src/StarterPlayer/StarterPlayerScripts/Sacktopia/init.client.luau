@@ -21,6 +21,8 @@ local StreakAlert = require(script:WaitForChild("StreakAlert"))
 local LeaderboardHUD = require(script:WaitForChild("LeaderboardHUD"))
 local Sounds = require(script:WaitForChild("Sounds"))
 local Music = require(script:WaitForChild("Music"))
+local TutorialHUD = require(script:WaitForChild("TutorialHUD"))
+local DailyRewardHUD = require(script:WaitForChild("DailyRewardHUD"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -130,4 +132,6 @@ StreakAlert.start()
 LeaderboardHUD.start()
 Sounds.start()
 Music.start()
+TutorialHUD.start()
+DailyRewardHUD.start()
 print("[Sacktopia] client boot")

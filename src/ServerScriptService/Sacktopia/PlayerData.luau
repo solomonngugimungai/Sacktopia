@@ -20,6 +20,10 @@ export type Save = {
 	owned: { [string]: boolean },
 	ownedSkins: { [string]: boolean },
 	loadout: { [string]: string },
+	-- meta progression
+	tutorialSeen: boolean,
+	lastDailyClaimAt: number, -- os.time() of last claim, 0 = never
+	dailyStreak: number, -- 1..7 then resets
 }
 
 local SAVE_VERSION = 1
@@ -78,6 +82,9 @@ local function defaultSave(): Save
 		owned = owned,
 		ownedSkins = ownedSkins,
 		loadout = loadout,
+		tutorialSeen = false,
+		lastDailyClaimAt = 0,
+		dailyStreak = 0,
 	}
 end
 

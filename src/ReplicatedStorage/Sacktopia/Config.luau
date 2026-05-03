@@ -126,6 +126,33 @@ Config.Music = {
 	FadeSeconds = 1.5,
 }
 
+-- Daily login rewards. Tier resets to day 1 if a player misses a day (>48 h since last
+-- claim). Eligibility for the next claim opens 22 h after the previous one.
+Config.DailyRewards = {
+	[1] = { coins = 50 },
+	[2] = { coins = 100 },
+	[3] = { coins = 150, item = "FratCap" }, -- gifts the cosmetic if not owned
+	[4] = { coins = 200 },
+	[5] = { coins = 300 },
+	[6] = { coins = 500 },
+	[7] = { coins = 1000, skin = "Disco" },
+	-- After day 7 streak resets to day 1.
+}
+
+-- First-time tutorial shown once per save (tutorialSeen flag flips to true after dismiss).
+Config.Tutorial = {
+	Title = "WELCOME TO SACKTOPIA",
+	Lines = {
+		"🎯  Walk through a PORTAL to enter a world",
+		"🟢  Step on the GREEN pad to queue for a match",
+		"💥  SPACE or LEFT-CLICK = deflect the sack",
+		"🎯  Aim with your cursor — sack flies where you point",
+		"⚡  Q = dash",
+		"🚫  DROP the sack and you're OUT",
+		"🥋  Yellow pad in PRACTICE = solo training, no elimination",
+	},
+}
+
 -- Anti-spam intervals in seconds for each client→server remote.
 Config.RateLimit = {
 	DeflectAttempt = 0.05, -- 20 Hz cap

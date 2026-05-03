@@ -70,6 +70,14 @@ local Remotes = {
 	StreakAlert = getOrCreate(root, "RemoteEvent", "StreakAlert") :: RemoteEvent,
 	-- server → all: top-N leaderboard snapshot { entries = { {userId, displayName, points, tierId, wins} } }
 	LeaderboardSnapshot = getOrCreate(root, "RemoteEvent", "LeaderboardSnapshot") :: RemoteEvent,
+	-- server → owning client: open the welcome tutorial overlay
+	TutorialShow = getOrCreate(root, "RemoteEvent", "TutorialShow") :: RemoteEvent,
+	-- client → server: the player dismissed / acknowledged the tutorial
+	TutorialAck = getOrCreate(root, "RemoteEvent", "TutorialAck") :: RemoteEvent,
+	-- server → owning client: a daily reward is available {day, coins, item?, skin?}
+	DailyRewardOffer = getOrCreate(root, "RemoteEvent", "DailyRewardOffer") :: RemoteEvent,
+	-- client → server: the player clicked Claim
+	DailyRewardClaim = getOrCreate(root, "RemoteEvent", "DailyRewardClaim") :: RemoteEvent,
 }
 
 return Remotes
