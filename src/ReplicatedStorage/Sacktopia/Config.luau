@@ -89,12 +89,12 @@ Config.Dash = {
 }
 
 -- Master debug switches. Flip Enabled = false for public release; flip Logs to false to
--- silence the diagnostic prints; flip GrantAllItems to false so only Starter cosmetics
--- are owned at first join (production progression).
+-- silence the diagnostic prints. GrantAllItems=true gives every player every cosmetic at
+-- join (no shop wired yet, so off would mean players can never equip anything).
 Config.Debug = {
 	Enabled = false,
 	Logs = false,
-	GrantAllItems = false,
+	GrantAllItems = true,
 }
 
 -- Coins are a separate currency from rank Points — used (later) to buy cosmetics.
