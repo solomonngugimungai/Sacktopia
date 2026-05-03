@@ -69,30 +69,25 @@ local function tryDeflect(_source: string)
 	Remotes.DeflectAttempt:FireServer(aimDirection(), workspace:GetServerTimeNow(), cursorTargetUserId())
 end
 
--- Listen to *all* keyboard input — don't gate on `processed` because Roblox's default
--- jump action sometimes flags Space as game-processed even when the player isn't typing.
+-- Three deflect inputs, all equally valid: SPACE, left-click, gamepad R2. We DON'T gate
+-- on the `processed` flag for these because Roblox's default systems sometimes flag
+-- Space (jump action) and MouseButton1 (camera control) as processed even when the
+-- player isn't focused on a GUI / TextBox. The deflect itself is harmless when no
+-- window is open (tryDeflect returns immediately), and GUI buttons still receive their
+-- own click events alongside.
+--
+-- Kick animation is gated on `not processed` though — clicking the equip cycle button
+-- shouldn't make your leg swing.
 UserInputService.InputBegan:Connect(function(input: InputObject, processed: boolean)
-	-- skip only if the player is typing in chat / a focused TextBox
-	if processed and input.KeyCode ~= Enum.KeyCode.Space then
+	local isDeflectInput = input.KeyCode == Enum.KeyCode.Space
+		or input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.KeyCode == Enum.KeyCode.ButtonR2
+	if not isDeflectInput then
 		return
 	end
-	if input.KeyCode == Enum.KeyCode.Space then
-		tryDeflect("SPACE")
-		-- always play a local kick animation on SPACE so the player feels responsive
-		-- even if there's no sack incoming (player has nothing equipped, no active match, etc.)
-		if player.Character then
-			KickFX.playLocalKick(player.Character)
-		end
-	elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
-		tryDeflect("M1")
-		if player.Character then
-			KickFX.playLocalKick(player.Character)
-		end
-	elseif input.KeyCode == Enum.KeyCode.ButtonR2 then
-		tryDeflect("R2")
-		if player.Character then
-			KickFX.playLocalKick(player.Character)
-		end
+	tryDeflect("input")
+	if not processed and player.Character then
+		KickFX.playLocalKick(player.Character)
 	end
 end)
 
