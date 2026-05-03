@@ -549,23 +549,38 @@ function SackController:_step(dt: number)
 		self:_broadcastSnapshot()
 		return
 	end
-	-- integrate gravity + drag, then update part
-	local v = self.velocity
-	v = v + Vector3.new(0, -Config.Sack.Gravity * dt, 0)
-	v = v * (1 - Config.Sack.Drag * dt)
-	self.velocity = v
-	self.position = self.position + v * dt
-	-- In practice mode the sack tracks the player horizontally so it always falls toward
-	-- them — pure vertical play. Deflects also become pure vertical (see onDeflectAttempt).
-	if self.practiceMode and self.roster[1] then
-		local p = self.roster[1]
-		local root = characterRoot(p)
-		if root then
-			self.position = Vector3.new(root.Position.X, self.position.Y, root.Position.Z)
-			-- kill any horizontal drift from drag/integration
-			self.velocity = Vector3.new(0, self.velocity.Y, 0)
+
+	if self.practiceMode then
+		-- PRACTICE: gravity-based vertical play. Sack tracks the player horizontally so it
+		-- always falls back onto them; integrated gravity makes it bounce up/down.
+		local v = self.velocity
+		v = v + Vector3.new(0, -Config.Sack.Gravity * dt, 0)
+		v = v * (1 - Config.Sack.Drag * dt)
+		self.velocity = v
+		self.position = self.position + v * dt
+		if self.roster[1] then
+			local root = characterRoot(self.roster[1])
+			if root then
+				self.position = Vector3.new(root.Position.X, self.position.Y, root.Position.Z)
+				self.velocity = Vector3.new(0, self.velocity.Y, 0)
+			end
 		end
+	else
+		-- MATCH: BLADE BALL homing. Pick the current target and fly the sack DIRECTLY at
+		-- them every step. No gravity, no drift — if they don't deflect, they're sacked.
+		self:_chooseTarget()
+		if self.target then
+			local root = characterRoot(self.target)
+			if root then
+				local toTarget = root.Position - self.position
+				if toTarget.Magnitude > 0.01 then
+					self.velocity = toTarget.Unit * self.speed
+				end
+			end
+		end
+		self.position = self.position + self.velocity * dt
 	end
+
 	self:_clampInBounds()
 	self.part.Position = self.position
 

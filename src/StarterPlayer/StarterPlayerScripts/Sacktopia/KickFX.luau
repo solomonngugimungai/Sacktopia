@@ -32,8 +32,6 @@ local function playKick(character: Model, direction: Vector3)
 		return
 	end
 	local baseC0 = motor.C0
-	-- Swing the upper leg forward (around X, in joint local space). Direction is for future use
-	-- (e.g. side-kick if direction is mostly lateral); v2 keeps it a forward kick.
 	local _ = direction
 	local outCFrame = baseC0 * CFrame.Angles(-Config.KickFX.SwingAngleRadians, 0, 0)
 	local outTween = TweenService:Create(
@@ -52,6 +50,12 @@ local function playKick(character: Model, direction: Vector3)
 			backTween:Play()
 		end
 	end)
+end
+
+-- exposed so init.client can fire a local kick on every SPACE press, regardless of
+-- whether a deflect actually went through (so the player always sees their leg swing)
+function KickFX.playLocalKick(character: Model)
+	playKick(character, Vector3.new(0, 0, -1))
 end
 
 function KickFX.start()

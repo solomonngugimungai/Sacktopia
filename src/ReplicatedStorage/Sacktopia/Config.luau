@@ -114,6 +114,18 @@ Config.Sounds = {
 	UiClick = "rbxasset://sounds/electronicpingshort.wav",
 }
 
+-- Music tracks. Replace these IDs with real Roblox audio asset IDs you've purchased
+-- (or that allow free game use). Format: "rbxassetid://<numeric_id>".
+-- Find tracks on https://create.roblox.com/store/audio  → "Use" → copy the asset ID.
+-- Until you set real IDs, the music system stays silent (no error).
+Config.Music = {
+	-- TODO: replace with an upbeat track
+	LobbyTrackId = "",
+	MatchTrackId = "",
+	Volume = 0.35, -- 0 to 1; keep low so it doesn't drown out SFX
+	FadeSeconds = 1.5,
+}
+
 -- Anti-spam intervals in seconds for each client→server remote.
 Config.RateLimit = {
 	DeflectAttempt = 0.05, -- 20 Hz cap

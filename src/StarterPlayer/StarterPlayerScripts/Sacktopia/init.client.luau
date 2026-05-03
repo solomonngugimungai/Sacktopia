@@ -20,6 +20,7 @@ local CameraShake = require(script:WaitForChild("CameraShake"))
 local StreakAlert = require(script:WaitForChild("StreakAlert"))
 local LeaderboardHUD = require(script:WaitForChild("LeaderboardHUD"))
 local Sounds = require(script:WaitForChild("Sounds"))
+local Music = require(script:WaitForChild("Music"))
 
 local player = Players.LocalPlayer
 local windowOpen = false
@@ -77,10 +78,21 @@ UserInputService.InputBegan:Connect(function(input: InputObject, processed: bool
 	end
 	if input.KeyCode == Enum.KeyCode.Space then
 		tryDeflect("SPACE")
+		-- always play a local kick animation on SPACE so the player feels responsive
+		-- even if there's no sack incoming (player has nothing equipped, no active match, etc.)
+		if player.Character then
+			KickFX.playLocalKick(player.Character)
+		end
 	elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
 		tryDeflect("M1")
+		if player.Character then
+			KickFX.playLocalKick(player.Character)
+		end
 	elseif input.KeyCode == Enum.KeyCode.ButtonR2 then
 		tryDeflect("R2")
+		if player.Character then
+			KickFX.playLocalKick(player.Character)
+		end
 	end
 end)
 
@@ -122,4 +134,5 @@ CameraShake.start()
 StreakAlert.start()
 LeaderboardHUD.start()
 Sounds.start()
+Music.start()
 print("[Sacktopia] client boot")

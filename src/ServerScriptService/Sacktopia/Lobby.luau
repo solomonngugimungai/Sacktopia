@@ -342,14 +342,6 @@ function Lobby.start()
 			player.RespawnLocation = lobbySpawn
 		end
 		player.CharacterAdded:Connect(function(character: Model)
-			-- disable jumping so SPACE only triggers deflect, never jump
-			task.spawn(function()
-				local hum = character:WaitForChild("Humanoid", 5)
-				if hum and hum:IsA("Humanoid") then
-					hum.JumpPower = 0
-					hum.JumpHeight = 0
-				end
-			end)
 			-- a respawn means whatever the player was doing is over — clear any stale practice
 			-- session so the HUD doesn't keep ticking drops in the background
 			if Practice.isInSession(player) then

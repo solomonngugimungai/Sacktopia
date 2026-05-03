@@ -36,7 +36,9 @@ local function show(payload: { userId: number, displayName: string, reason: stri
 	end
 
 	local isSelf = payload.userId == player.UserId
-	local verb = (payload.reason == "ground") and "DROPPED IT" or "GOT SACKED"
+	-- Both "ground" (sack landed) and "missed" (sack hit you) are dropped — Blade Ball
+	-- terminology. Failing to deflect = drop, period.
+	local verb = "DROPPED IT"
 	local accent = isSelf and Color3.fromRGB(255, 90, 90) or Color3.fromRGB(255, 200, 80)
 
 	local banner = Instance.new("Frame")
@@ -75,7 +77,7 @@ local function show(payload: { userId: number, displayName: string, reason: stri
 	sub.TextScaled = true
 	sub.TextColor3 = Color3.fromRGB(180, 180, 180)
 	sub.TextStrokeTransparency = 0.4
-	sub.Text = (payload.reason == "ground") and "Sack hit the floor" or "Failed to deflect"
+	sub.Text = "Failed to deflect"
 	sub.Parent = banner
 
 	banner.Parent = gui
